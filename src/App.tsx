@@ -237,24 +237,36 @@ export function App() {
 
   const groups = useMemo(() => {
     const open = db.tasks.filter((t) => !t.done);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
-    const byDue = (a: Task, b: Task) => {
-      // تسک‌های با اولویت بالا در صورت تاریخ برابر یا بدون تاریخ بالاتر قرار می‌گیرند
-      const pWeight = { high: 0, medium: 1, low: 2, none: 3 };
+
+    const sortTasks = (a: Task, b: Task) => {
+      // 1. اولویت: high (0) > medium (1) > none (2) > low (3)
+      const pWeight = { high: 0, medium: 1, none: 2, low: 3 };
+      const aP = pWeight[a.priority || "none"];
+      const bP = pWeight[b.priority || "none"];
+      if (aP !== bP) return aP - bP;
+
+      // 2. وضعیت سررسید: تسک سررسیدشده بالاتر می‌آید
+      const aOverdue = a.due && ts(a) <= now ? 0 : 1;
+      const bOverdue = b.due && ts(b) <= now ? 0 : 1;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+
+      // 3. تاریخ نزدیک‌تر
       const timeDiff = ts(a) - ts(b);
-      if (timeDiff === 0 || (!a.due && !b.due)) {
-        return pWeight[a.priority || "none"] - pWeight[b.priority || "none"];
-      }
-      return timeDiff;
+      if (timeDiff !== 0) return timeDiff;
+
+      // 4. جدیدترها
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     };
+
+    const highPriority = open.filter((t) => t.priority === "high").sort(sortTasks);
+    const regularTasks = open.filter((t) => t.priority !== "high").sort(sortTasks);
+    const done = db.tasks.filter((t) => t.done).slice(0, 25);
+
     return {
-      overdue: open.filter((t) => t.due && ts(t) <= now).sort(byDue),
-      today: open.filter((t) => t.due && ts(t) > now && ts(t) <= endOfToday.getTime()).sort(byDue),
-      later: open.filter((t) => t.due && ts(t) > endOfToday.getTime()).sort(byDue),
-      someday: open.filter((t) => !t.due).sort(byDue),
-      done: db.tasks.filter((t) => t.done).slice(0, 20),
+      highPriority,
+      regularTasks,
+      done,
     };
   }, [db.tasks, now]);
 
@@ -290,29 +302,17 @@ export function App() {
         }
       />
 
-      <main className="flex-1 space-y-5">
+      <main className="flex-1 space-y-6">
         <Group
-          title="سررسید شده"
-          tasks={groups.overdue}
+          title="🔥 فوری و بااهمیت"
+          tasks={groups.highPriority}
           alert
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
-          title="امروز"
-          tasks={groups.today}
-          onSnooze={snooze}
-          {...{ toggle, remove, rename }}
-        />
-        <Group
-          title="بعداً"
-          tasks={groups.later}
-          onSnooze={snooze}
-          {...{ toggle, remove, rename }}
-        />
-        <Group
-          title="بدون زمان"
-          tasks={groups.someday}
+          title="کارهای جاری"
+          tasks={groups.regularTasks}
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
