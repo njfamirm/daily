@@ -13,15 +13,35 @@ export interface SyncConfig {
 
 const STORAGE_KEY = "taskdrop_cloud_sync_config";
 
+/**
+ * تعیین آدرس سرور معتبر؛ در صورت خالی بودن، اگر روی کلودفلر باشد به صورت خودکار از دامنه جاری استفاده می‌کند
+ */
+export function resolveEffectiveServerUrl(serverUrl?: string): string {
+  if (serverUrl && serverUrl.trim()) return serverUrl.trim();
+  if (typeof window !== "undefined" && window.location.origin) {
+    const origin = window.location.origin;
+    if (!origin.includes("github.io")) {
+      return origin;
+    }
+  }
+  return "";
+}
+
 export function loadSyncConfig(): SyncConfig {
   try {
     const raw =
       localStorage.getItem(STORAGE_KEY) || localStorage.getItem("daily_cloud_sync_config");
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as SyncConfig;
+      if (!parsed.serverUrl) {
+        parsed.serverUrl = resolveEffectiveServerUrl("");
+      }
+      return parsed;
+    }
   } catch {}
   return {
     enabled: false,
-    serverUrl: "",
+    serverUrl: resolveEffectiveServerUrl(""),
     vaultId: "",
     secretKey: "",
     authToken: "",
@@ -38,8 +58,9 @@ export function saveSyncConfig(cfg: SyncConfig) {
  * تبدیل آدرس سرور HTTP به آدرس WebSocket امن
  */
 export function getWebSocketUrl(serverUrl: string, vaultId: string, authToken?: string): string {
-  if (!serverUrl || !vaultId) return "";
-  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  const targetUrl = resolveEffectiveServerUrl(serverUrl);
+  if (!targetUrl || !vaultId) return "";
+  const cleanUrl = targetUrl.replace(/\/+$/, "");
   const wsProto = cleanUrl.startsWith("https://") ? "wss://" : "ws://";
   const hostAndPath = cleanUrl.replace(/^https?:\/\//, "");
   const query =
@@ -93,11 +114,12 @@ export async function pushToVault(
   db: DB,
   authToken?: string,
 ): Promise<{ ok: boolean; updatedAt: number }> {
-  if (!serverUrl || !vaultId || !secretKey) {
+  const targetUrl = resolveEffectiveServerUrl(serverUrl);
+  if (!targetUrl || !vaultId || !secretKey) {
     throw new Error("تنظیمات سرور یا کلید والت کامل نیست");
   }
 
-  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  const cleanUrl = targetUrl.replace(/\/+$/, "");
   const plainText = JSON.stringify(db);
   const cipher = await encryptData(plainText, secretKey);
   const now = Date.now();
@@ -133,8 +155,9 @@ export async function checkVaultVersion(
   vaultId: string,
   authToken?: string,
 ): Promise<{ updatedAt: number } | null> {
-  if (!serverUrl || !vaultId) return null;
-  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  const targetUrl = resolveEffectiveServerUrl(serverUrl);
+  if (!targetUrl || !vaultId) return null;
+  const cleanUrl = targetUrl.replace(/\/+$/, "");
   try {
     const res = await fetch(`${cleanUrl}/api/sync/${encodeURIComponent(vaultId)}/version`, {
       headers: getAuthHeaders(authToken),
@@ -156,11 +179,12 @@ export async function pullFromVault(
   secretKey: string,
   authToken?: string,
 ): Promise<{ db: DB; updatedAt: number } | null> {
-  if (!serverUrl || !vaultId || !secretKey) {
+  const targetUrl = resolveEffectiveServerUrl(serverUrl);
+  if (!targetUrl || !vaultId || !secretKey) {
     return null;
   }
 
-  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  const cleanUrl = targetUrl.replace(/\/+$/, "");
   const res = await fetch(`${cleanUrl}/api/sync/${encodeURIComponent(vaultId)}`, {
     headers: getAuthHeaders(authToken),
   });

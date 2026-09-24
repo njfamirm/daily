@@ -30,20 +30,21 @@ declare global {
 
 export interface DurableObjectNamespace {
   idFromName(name: string): DurableObjectId;
-  get(id: DurableObjectId): DurableObjectStub;
+  get(id: DurableObjectId): Fetcher;
 }
 
 export interface DurableObjectId {
   toString(): string;
 }
 
-export interface DurableObjectStub {
+export interface Fetcher {
   fetch(request: Request | string, init?: RequestInit): Promise<Response>;
 }
 
 export interface Env {
   VAULTS: KVNamespace;
   VAULT_ROOMS?: DurableObjectNamespace;
+  ASSETS?: Fetcher;
   AUTH_TOKEN?: string;
 }
 
@@ -344,6 +345,10 @@ export default {
     // ۶. روت‌های والت سینک: /api/sync/:vaultId
     const syncMatch = pathname.match(/^\/api\/sync\/([^/]+)$/);
     if (!syncMatch) {
+      // سرو فایل‌های استاتیک فرانت‌اند SPA در صورت فعال بودن ASSETS
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(request);
+      }
       return jsonResponse({ error: "Not found" }, 404);
     }
 

@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build & Deploy (GitHub Pages + Cloudflare)
 
 on:
   push:
@@ -12,14 +12,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "deployment"
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,16 +32,40 @@ jobs:
       - name: Install dependencies
         run: vp install
 
-      - name: Check code
+      - name: Code Check & Lint
         run: vp check
 
-      - name: Build
+      - name: Run Tests
+        run: vp test --run
+
+      - name: Build SPA
         run: vp run build
+
+      - name: Upload Dist Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifact
+          path: "./dist"
+          retention-days: 1
+
+  deploy-github-pages:
+    name: Deploy to GitHub Pages (Demo)
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Dist Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-artifact
+          path: "./dist"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: "./dist"
@@ -51,3 +73,37 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-cloudflare:
+    name: Deploy to Cloudflare (Full-Stack + Sync Relay)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Dist Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-artifact
+          path: "./dist"
+
+      - name: Deploy to Cloudflare Workers with Static Assets
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: "cloudflare"
+          secrets: |
+            AUTH_TOKEN
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+
+      - name: Cloudflare Token Notice
+        if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
+        run: |
+          echo "::notice title=Cloudflare Deployment Skipped::CLOUDFLARE_API_TOKEN secret is not configured in repository settings. Add CLOUDFLARE_API_TOKEN to enable automatic Cloudflare deployment."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
