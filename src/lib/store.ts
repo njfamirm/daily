@@ -1,0 +1,103 @@
+import { DEFAULT_DB, type DB, type Note, type Repeat, type Task } from "@/lib/types.ts";
+import { uid } from "@/lib/utils.ts";
+
+const KEY = "daily.db.v1";
+
+const REPEATS: Repeat[] = ["none", "daily", "weekly", "monthly"];
+
+function str(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback;
+}
+
+function bool(v: unknown, fallback: boolean): boolean {
+  return typeof v === "boolean" ? v : fallback;
+}
+
+function isoOrNull(v: unknown): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function normalizeTask(raw: unknown): Task | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const t = raw as Record<string, unknown>;
+  const title = str(t.title).trim();
+  if (!title) return null;
+  const repeat = REPEATS.includes(t.repeat as Repeat) ? (t.repeat as Repeat) : "none";
+  return {
+    id: str(t.id) || uid(),
+    title,
+    due: isoOrNull(t.due),
+    repeat,
+    done: bool(t.done, false),
+    createdAt: isoOrNull(t.createdAt) ?? new Date().toISOString(),
+    doneAt: isoOrNull(t.doneAt),
+    notifiedAt: isoOrNull(t.notifiedAt),
+    tags: Array.isArray(t.tags) ? t.tags.filter((x): x is string => typeof x === "string") : [],
+  };
+}
+
+function normalizeNote(raw: unknown): Note | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const n = raw as Record<string, unknown>;
+  const text = str(n.text).trim();
+  if (!text) return null;
+  return {
+    id: str(n.id) || uid(),
+    text,
+    createdAt: isoOrNull(n.createdAt) ?? new Date().toISOString(),
+  };
+}
+
+/** هر ورودی‌ای (مثلاً خروجی ویرایش‌شده توسط AI) را به یک DB معتبر تبدیل می‌کند. */
+export function normalizeDB(raw: unknown): DB {
+  if (typeof raw !== "object" || raw === null) return structuredClone(DEFAULT_DB);
+  const d = raw as Record<string, unknown>;
+  const s = (typeof d.settings === "object" && d.settings !== null ? d.settings : {}) as Record<
+    string,
+    unknown
+  >;
+  const interval = typeof s.checkIntervalSec === "number" ? s.checkIntervalSec : 15;
+  const lead = typeof s.leadMinutes === "number" ? s.leadMinutes : 0;
+  return {
+    version: 1,
+    settings: {
+      sound: bool(s.sound, true),
+      notifications: bool(s.notifications, true),
+      checkIntervalSec: Math.min(3600, Math.max(5, Math.round(interval))),
+      leadMinutes: Math.min(1440, Math.max(0, Math.round(lead))),
+    },
+    notes: (Array.isArray(d.notes) ? d.notes : [])
+      .map(normalizeNote)
+      .filter((n): n is Note => n !== null),
+    tasks: (Array.isArray(d.tasks) ? d.tasks : [])
+      .map(normalizeTask)
+      .filter((t): t is Task => t !== null),
+  };
+}
+
+export function loadDB(): DB {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return structuredClone(DEFAULT_DB);
+    return normalizeDB(JSON.parse(raw));
+  } catch {
+    return structuredClone(DEFAULT_DB);
+  }
+}
+
+export function saveDB(db: DB) {
+  localStorage.setItem(KEY, JSON.stringify(db));
+}
+
+/** JSON را از متن آزاد بیرون می‌کشد (حتی اگر داخل ```json باشد). */
+export function parseIncoming(text: string): DB {
+  const trimmed = text.trim();
+  const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(trimmed);
+  const body = fence ? fence[1] : trimmed;
+  const start = body.indexOf("{");
+  const end = body.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("JSON پیدا نشد");
+  return normalizeDB(JSON.parse(body.slice(start, end + 1)));
+}
