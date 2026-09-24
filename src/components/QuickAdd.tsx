@@ -247,9 +247,18 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
         id="quick-add-input"
         autoFocus
         value={value}
+        enterKeyHint="done"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="sentences"
         placeholder="چی یادت نره؟  مثلاً: فردا ساعت ۱۰ جلسه فنی !فوری #کار"
         onChange={(e) => setValue(e.target.value)}
-        onFocus={unlockAudio}
+        onFocus={(e) => {
+          unlockAudio();
+          setTimeout(() => {
+            e.target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }, 300);
+        }}
         onKeyDown={(e) => {
           if (isOpen && suggestions.length > 0) {
             if (e.key === "ArrowDown") {

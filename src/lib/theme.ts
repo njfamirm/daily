@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import type { PrimaryColor, ThemeMode } from "@/lib/types.ts";
 
 export interface ColorPreset {
@@ -60,7 +62,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
 ];
 
-export function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor = "yellow") {
+export async function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor = "yellow") {
   const root = document.documentElement;
 
   let resolved = theme;
@@ -68,8 +70,26 @@ export function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor = "yel
     resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
-  root.classList.toggle("dark", resolved === "dark");
-  root.classList.toggle("light", resolved === "light");
+  const isDark = resolved === "dark";
+  root.classList.toggle("dark", isDark);
+  root.classList.toggle("light", !isDark);
   root.setAttribute("data-theme", resolved);
   root.setAttribute("data-color", color);
+
+  // هماهنگ‌سازی متای رنگ تم در مرورگر و PWA
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  const bgColor = isDark ? "#09090b" : "#f8fafc";
+  if (metaThemeColor) {
+    metaThemeColor.setAttribute("content", bgColor);
+  }
+
+  // هماهنگ‌سازی نوار وضعیت (Status Bar) بومی در موبایل (Android / iOS)
+  if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("StatusBar")) {
+    try {
+      await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+      if (Capacitor.getPlatform() === "android") {
+        await StatusBar.setBackgroundColor({ color: bgColor });
+      }
+    } catch {}
+  }
 }

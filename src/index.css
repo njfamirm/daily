@@ -64,6 +64,7 @@ html,
 body,
 #app {
   height: 100%;
+  overscroll-behavior-y: contain;
 }
 
 body {
@@ -71,6 +72,7 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
@@ -82,6 +84,23 @@ textarea,
 select,
 kbd {
   font-family: inherit;
+}
+
+button,
+a,
+[role="button"],
+input[type="checkbox"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+kbd,
+nav,
+header,
+svg {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 * {

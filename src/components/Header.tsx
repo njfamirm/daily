@@ -10,6 +10,7 @@ import { requestNotificationPermission } from "@/lib/notify.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
 import { applyTheme, COLOR_PRESETS } from "@/lib/theme.ts";
+import { hapticSelection, hapticSuccess } from "@/lib/haptics.ts";
 import type { DB, PrimaryColor, ThemeMode } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -74,7 +75,7 @@ export function Header({
 
   // اعمال تم و رنگ پرایمری به سند
   useEffect(() => {
-    applyTheme(currentTheme, currentPrimary);
+    void applyTheme(currentTheme, currentPrimary);
   }, [currentTheme, currentPrimary]);
 
   // بستن منو با Escape
@@ -89,6 +90,7 @@ export function Header({
   }, [menuOpen]);
 
   const selectPrimaryColor = (color: PrimaryColor) => {
+    void hapticSelection();
     onUpdateSetting("primaryColor", color);
     const colorObj = COLOR_PRESETS.find((c) => c.id === color);
     onMessage(`رنگ ${colorObj?.label || color} انتخاب شد`);
@@ -99,6 +101,7 @@ export function Header({
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
+      void hapticSuccess();
       onMessage("کپی شد! پرامپت و دیتای تسک‌ها در کلیپ‌بورد قرار گرفت");
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -111,6 +114,7 @@ export function Header({
     try {
       onReplace(parseIncoming(text));
       setFallback(null);
+      void hapticSuccess();
       onMessage("دیتا با موفقیت از AI جایگزین شد", () => onReplace(before));
     } catch (err) {
       onMessage(`پیست نشد: ${err instanceof Error ? err.message : "ورودی نامعتبر"}`);

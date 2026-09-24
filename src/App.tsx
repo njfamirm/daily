@@ -4,6 +4,7 @@ import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
 import { fireConfettiAt } from "@/lib/confetti.ts";
+import { hapticLight, hapticMedium, hapticSuccess, hapticWarning } from "@/lib/haptics.ts";
 import { UpdateDialog } from "@/components/UpdateDialog.tsx";
 import { initNotificationChannel, syncAllTaskNotifications } from "@/lib/notifications.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
@@ -210,6 +211,7 @@ export function App() {
   const addTask = (raw: string) => {
     const p = parseInput(raw);
     if (!p.title) return;
+    void hapticLight();
     const nowIso = new Date().toISOString();
     const task: Task = {
       id: uid(),
@@ -234,6 +236,9 @@ export function App() {
       const target = prev.tasks.find((t) => t.id === id);
       if (target && !target.done) {
         fireConfettiAt(event);
+        void hapticSuccess();
+      } else {
+        void hapticLight();
       }
       const nowIso = new Date().toISOString();
       return {
@@ -260,6 +265,7 @@ export function App() {
     });
 
   const remove = (id: string) => {
+    void hapticWarning();
     const before = db;
     const nowIso = new Date().toISOString();
     update((prev) => ({
@@ -272,6 +278,7 @@ export function App() {
   };
 
   const snooze = (id: string, preset: SnoozePreset) => {
+    void hapticMedium();
     const before = db;
     const targetIso = computeSnoozeTime(preset);
     const nowIso = new Date().toISOString();
@@ -310,6 +317,7 @@ export function App() {
   };
 
   const clearDone = () => {
+    void hapticWarning();
     const before = db;
     const nowIso = new Date().toISOString();
     update((prev) => ({
@@ -330,6 +338,7 @@ export function App() {
   });
 
   const handleSetSortBy = (mode: SortMode) => {
+    void hapticLight();
     setSortBy(mode);
     try {
       localStorage.setItem("daily.sortBy", mode);
