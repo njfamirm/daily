@@ -35,6 +35,19 @@ export function saveSyncConfig(cfg: SyncConfig) {
 }
 
 /**
+ * تبدیل آدرس سرور HTTP به آدرس WebSocket امن
+ */
+export function getWebSocketUrl(serverUrl: string, vaultId: string, authToken?: string): string {
+  if (!serverUrl || !vaultId) return "";
+  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  const wsProto = cleanUrl.startsWith("https://") ? "wss://" : "ws://";
+  const hostAndPath = cleanUrl.replace(/^https?:\/\//, "");
+  const query =
+    authToken && authToken.trim() ? `?token=${encodeURIComponent(authToken.trim())}` : "";
+  return `${wsProto}${hostAndPath}/ws/${encodeURIComponent(vaultId)}${query}`;
+}
+
+/**
  * تولید رشته فشرده برای جفت‌سازی سریع و تولید QR Code
  */
 export function encodeSyncPairingToken(cfg: SyncConfig): string {
@@ -87,13 +100,14 @@ export async function pushToVault(
   const cleanUrl = serverUrl.replace(/\/+$/, "");
   const plainText = JSON.stringify(db);
   const cipher = await encryptData(plainText, secretKey);
+  const now = Date.now();
 
   const res = await fetch(`${cleanUrl}/api/sync/${encodeURIComponent(vaultId)}`, {
     method: "POST",
     headers: getAuthHeaders(authToken),
     body: JSON.stringify({
       payload: cipher,
-      updatedAt: Date.now(),
+      updatedAt: now,
       version: 1,
     }),
   });
@@ -108,7 +122,29 @@ export async function pushToVault(
   }
 
   const data = await res.json();
-  return { ok: true, updatedAt: data.updatedAt };
+  return { ok: true, updatedAt: data.updatedAt ?? now };
+}
+
+/**
+ * بررسی سریع و کم‌حجم آخرین نسخه سرور
+ */
+export async function checkVaultVersion(
+  serverUrl: string,
+  vaultId: string,
+  authToken?: string,
+): Promise<{ updatedAt: number } | null> {
+  if (!serverUrl || !vaultId) return null;
+  const cleanUrl = serverUrl.replace(/\/+$/, "");
+  try {
+    const res = await fetch(`${cleanUrl}/api/sync/${encodeURIComponent(vaultId)}/version`, {
+      headers: getAuthHeaders(authToken),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { updatedAt: data.updatedAt ?? 0 };
+    }
+  } catch {}
+  return null;
 }
 
 /**

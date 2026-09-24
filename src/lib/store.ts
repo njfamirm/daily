@@ -36,6 +36,7 @@ function normalizeTask(raw: unknown): Task | null {
     typeof t.description === "string" && t.description.trim() ? t.description.trim() : null;
   const repeat = REPEATS.includes(t.repeat as Repeat) ? (t.repeat as Repeat) : "none";
   const priority = PRIORITIES.includes(t.priority as Priority) ? (t.priority as Priority) : "none";
+  const createdAt = isoOrNull(t.createdAt) ?? new Date().toISOString();
   return {
     id: str(t.id) || uid(),
     title,
@@ -44,8 +45,10 @@ function normalizeTask(raw: unknown): Task | null {
     repeat,
     priority,
     done: bool(t.done, false),
-    createdAt: isoOrNull(t.createdAt) ?? new Date().toISOString(),
+    createdAt,
+    updatedAt: isoOrNull(t.updatedAt) ?? createdAt,
     doneAt: isoOrNull(t.doneAt),
+    deletedAt: isoOrNull(t.deletedAt),
     notifiedAt: isoOrNull(t.notifiedAt),
     tags: Array.isArray(t.tags) ? t.tags.filter((x): x is string => typeof x === "string") : [],
   };
@@ -56,10 +59,13 @@ function normalizeNote(raw: unknown): Note | null {
   const n = raw as Record<string, unknown>;
   const text = str(n.text).trim();
   if (!text) return null;
+  const createdAt = isoOrNull(n.createdAt) ?? new Date().toISOString();
   return {
     id: str(n.id) || uid(),
     text,
-    createdAt: isoOrNull(n.createdAt) ?? new Date().toISOString(),
+    createdAt,
+    updatedAt: isoOrNull(n.updatedAt) ?? createdAt,
+    deletedAt: isoOrNull(n.deletedAt),
   };
 }
 

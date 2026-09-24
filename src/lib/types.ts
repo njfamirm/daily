@@ -18,7 +18,11 @@ export interface Task {
   priority: Priority;
   done: boolean;
   createdAt: string;
+  /** زمان آخرین ویرایش */
+  updatedAt?: string;
   doneAt: string | null;
+  /** زمان حذف (Tombstone) برای جلوگیری از زنده شدن در سینک */
+  deletedAt?: string | null;
   /** آخرین باری که نوتیف داده شده (برای جلوگیری از تکرار نوتیف) */
   notifiedAt: string | null;
   tags: string[];
@@ -29,6 +33,8 @@ export interface Note {
   id: string;
   text: string;
   createdAt: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface Settings {
@@ -53,6 +59,7 @@ export interface DB {
   aiMemory?: string;
   notes: Note[];
   tasks: Task[];
+  lastModified?: string;
 }
 
 export const DEFAULT_DB: DB = {

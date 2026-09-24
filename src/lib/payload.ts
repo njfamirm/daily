@@ -58,7 +58,15 @@ export function buildPayload(db: DB): string {
     ? `\n## حافظه و دستورالعمل‌های همیشگی من به تو:\n${db.aiMemory.trim()}\n`
     : "";
 
+  const cleanDb: DB = {
+    version: 1,
+    settings: db.settings,
+    aiMemory: db.aiMemory,
+    notes: db.notes.filter((n) => !n.deletedAt),
+    tasks: db.tasks.filter((t) => !t.deletedAt),
+  };
+
   return `${SPEC}${memorySection}\n## زمان حال\n${localISO(now)} (${weekday}) — تایم‌زون ${
     Intl.DateTimeFormat().resolvedOptions().timeZone
-  }\n\n## دیتا\n\`\`\`json\n${JSON.stringify(db, null, 2)}\n\`\`\`\n`;
+  }\n\n## دیتا\n\`\`\`json\n${JSON.stringify(cleanDb, null, 2)}\n\`\`\`\n`;
 }

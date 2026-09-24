@@ -105,6 +105,7 @@ export function App() {
       const ring: Task[] = db.tasks.filter(
         (x) =>
           !x.done &&
+          !x.deletedAt &&
           x.due !== null &&
           new Date(x.due).getTime() - lead <= t &&
           (x.notifiedAt === null || new Date(x.notifiedAt).getTime() < new Date(x.due).getTime()),
@@ -115,10 +116,11 @@ export function App() {
         }
         if (db.settings.sound) beep(ring.length > 1 ? 3 : 2);
         const ids = new Set(ring.map((x) => x.id));
+        const nowIso = new Date().toISOString();
         update((prev) => ({
           ...prev,
           tasks: prev.tasks.map((x) =>
-            ids.has(x.id) ? { ...x, notifiedAt: new Date().toISOString() } : x,
+            ids.has(x.id) ? { ...x, notifiedAt: nowIso, updatedAt: nowIso } : x,
           ),
         }));
       }
@@ -130,7 +132,9 @@ export function App() {
 
   const due = useMemo(
     () =>
-      db.tasks.filter((t) => !t.done && t.due !== null && new Date(t.due).getTime() <= now).length,
+      db.tasks.filter(
+        (t) => !t.done && !t.deletedAt && t.due !== null && new Date(t.due).getTime() <= now,
+      ).length,
     [db.tasks, now],
   );
 
@@ -194,6 +198,7 @@ export function App() {
   const addTask = (raw: string) => {
     const p = parseInput(raw);
     if (!p.title) return;
+    const nowIso = new Date().toISOString();
     const task: Task = {
       id: uid(),
       title: p.title,
@@ -202,8 +207,10 @@ export function App() {
       repeat: p.repeat,
       priority: p.priority,
       done: false,
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
       doneAt: null,
+      deletedAt: null,
       notifiedAt: null,
       tags: p.tags,
     };
@@ -216,18 +223,25 @@ export function App() {
       if (target && !target.done) {
         fireConfettiAt(event);
       }
+      const nowIso = new Date().toISOString();
       return {
         ...prev,
         tasks: prev.tasks.map((t) => {
           if (t.id !== id) return t;
           // تسک تکرارشونده به‌جای بسته‌شدن، به موعد بعدی می‌رود
           if (!t.done && t.repeat !== "none" && t.due) {
-            return { ...t, due: nextDue(t.due, t.repeat), notifiedAt: null };
+            return {
+              ...t,
+              due: nextDue(t.due, t.repeat),
+              notifiedAt: null,
+              updatedAt: nowIso,
+            };
           }
           return {
             ...t,
             done: !t.done,
-            doneAt: t.done ? null : new Date().toISOString(),
+            doneAt: t.done ? null : nowIso,
+            updatedAt: nowIso,
           };
         }),
       };
@@ -235,17 +249,26 @@ export function App() {
 
   const remove = (id: string) => {
     const before = db;
-    update((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => t.id !== id) }));
+    const nowIso = new Date().toISOString();
+    update((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === id ? { ...t, deletedAt: nowIso, updatedAt: nowIso } : t,
+      ),
+    }));
     showToast("حذف شد", () => setDb(before));
   };
 
   const snooze = (id: string, preset: SnoozePreset) => {
     const before = db;
     const targetIso = computeSnoozeTime(preset);
+    const nowIso = new Date().toISOString();
     update((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) =>
-        t.id === id ? { ...t, due: targetIso, notifiedAt: null, done: false } : t,
+        t.id === id
+          ? { ...t, due: targetIso, notifiedAt: null, done: false, updatedAt: nowIso }
+          : t,
       ),
     }));
     const presetLabels: Record<SnoozePreset, string> = {
@@ -257,7 +280,8 @@ export function App() {
     showToast(`موعد به تعویق افتاد: ${presetLabels[preset]}`, () => setDb(before));
   };
 
-  const rename = (id: string, title: string, description?: string | null) =>
+  const rename = (id: string, title: string, description?: string | null) => {
+    const nowIso = new Date().toISOString();
     update((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) =>
@@ -266,14 +290,22 @@ export function App() {
               ...t,
               title: title.trim() || t.title,
               description: description !== undefined ? description : t.description,
+              updatedAt: nowIso,
             }
           : t,
       ),
     }));
+  };
 
   const clearDone = () => {
     const before = db;
-    update((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => !t.done) }));
+    const nowIso = new Date().toISOString();
+    update((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.done && !t.deletedAt ? { ...t, deletedAt: nowIso, updatedAt: nowIso } : t,
+      ),
+    }));
     showToast("تسک‌های انجام‌شده پاک شدند", () => setDb(before));
   };
 
@@ -295,6 +327,7 @@ export function App() {
   const allTags = useMemo(() => {
     const set = new Set<string>();
     for (const t of db.tasks) {
+      if (t.deletedAt) continue;
       for (const tag of t.tags || []) {
         if (tag.trim()) set.add(tag.trim());
       }
@@ -303,7 +336,7 @@ export function App() {
   }, [db.tasks]);
 
   const groups = useMemo(() => {
-    const open = db.tasks.filter((t) => !t.done);
+    const open = db.tasks.filter((t) => !t.done && !t.deletedAt);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
 
     if (sortBy === "priority") {
@@ -329,7 +362,7 @@ export function App() {
 
       const highPriority = open.filter((t) => t.priority === "high").sort(sortTasks);
       const regularTasks = open.filter((t) => t.priority !== "high").sort(sortTasks);
-      const done = db.tasks.filter((t) => t.done).slice(0, 25);
+      const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
 
       return {
         mode: "priority" as const,
@@ -355,7 +388,7 @@ export function App() {
           return pWeight[a.priority || "none"] - pWeight[b.priority || "none"];
         });
 
-      const done = db.tasks.filter((t) => t.done).slice(0, 25);
+      const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
 
       return {
         mode: "due" as const,
@@ -370,7 +403,7 @@ export function App() {
     const createdTasks = [...open].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    const done = db.tasks.filter((t) => t.done).slice(0, 25);
+    const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
 
     return {
       mode: "created" as const,
@@ -382,7 +415,8 @@ export function App() {
   const setSetting = <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) =>
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
 
-  const openCount = db.tasks.filter((t) => !t.done).length;
+  const activeTasksCount = db.tasks.filter((t) => !t.deletedAt).length;
+  const openCount = db.tasks.filter((t) => !t.done && !t.deletedAt).length;
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 py-6 sm:py-10">
@@ -401,20 +435,30 @@ export function App() {
       {showInput && <QuickAdd onAdd={addTask} existingTags={allTags} />}
 
       <Notes
-        notes={db.notes}
-        onAdd={(text) =>
+        notes={db.notes.filter((n) => !n.deletedAt)}
+        onAdd={(text) => {
+          const nowIso = new Date().toISOString();
           update((prev) => ({
             ...prev,
-            notes: [...prev.notes, { id: uid(), text, createdAt: new Date().toISOString() }],
-          }))
-        }
-        onRemove={(id) =>
-          update((prev) => ({ ...prev, notes: prev.notes.filter((n) => n.id !== id) }))
-        }
+            notes: [
+              ...prev.notes,
+              { id: uid(), text, createdAt: nowIso, updatedAt: nowIso, deletedAt: null },
+            ],
+          }));
+        }}
+        onRemove={(id) => {
+          const nowIso = new Date().toISOString();
+          update((prev) => ({
+            ...prev,
+            notes: prev.notes.map((n) =>
+              n.id === id ? { ...n, deletedAt: nowIso, updatedAt: nowIso } : n,
+            ),
+          }));
+        }}
       />
 
       <main className="flex-1 space-y-6">
-        {db.tasks.length > 0 && (
+        {activeTasksCount > 0 && (
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-medium text-zinc-400">{openCount} تسک باز</span>
             <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 text-xs shadow-xs">
@@ -506,7 +550,7 @@ export function App() {
           {...{ toggle, remove, rename }}
         />
 
-        {db.tasks.length === 0 && (
+        {activeTasksCount === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
             لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300 font-medium">پیست</strong>{" "}
             از AI دیتای جدید وارد کنید یا با کلید <Kbd size="xs">/</Kbd> تسک بنویسید.

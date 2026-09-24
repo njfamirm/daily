@@ -9,6 +9,20 @@
       "id": "YOUR_KV_NAMESPACE_ID",
     },
   ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "VAULT_ROOMS",
+        "class_name": "VaultRoom",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["VaultRoom"],
+    },
+  ],
   "observability": {
     "enabled": true,
   },
