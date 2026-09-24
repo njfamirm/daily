@@ -25,20 +25,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.21.1
         with:
-          node-version: 22
-          cache: "pnpm"
+          node-version: "22"
+          cache: true
 
       - name: Install dependencies
-        run: pnpm install
+        run: vp install
+
+      - name: Check code
+        run: vp check
 
       - name: Build
-        run: pnpm run build
+        run: vp run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
