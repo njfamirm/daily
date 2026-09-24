@@ -1,17 +1,12 @@
-import { DailyDigestModal } from "@/components/DailyDigestModal.tsx";
-import { HelpSheet } from "@/components/HelpSheet.tsx";
+import { Header } from "@/components/Header.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
-import { SyncBar } from "@/components/SyncBar.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
-import { WeeklyStreak } from "@/components/WeeklyStreak.tsx";
-import { Button } from "@/components/ui/button.tsx";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
-import { Bell, BellOff, FileText, HelpCircle, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string {
@@ -49,10 +44,26 @@ export function App() {
   const { db, setDb, update } = useDB();
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [digestOpen, setDigestOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [showInput, setShowInput] = useState(() => {
+    try {
+      const saved = localStorage.getItem("daily.showInput");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
   const firedRef = useRef(false);
+
+  const toggleInput = () => {
+    setShowInput((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("daily.showInput", String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const showToast = (text: string, undo?: () => void) => {
     setToast({ text, undo });
@@ -135,16 +146,8 @@ export function App() {
         return;
       }
 
-      // Escape برای بستن مدال راهنما یا لغو فیلتر تگ
+      // Escape برای لغو فیلتر تگ
       if (e.key === "Escape") {
-        if (helpOpen) {
-          setHelpOpen(false);
-          return;
-        }
-        if (digestOpen) {
-          setDigestOpen(false);
-          return;
-        }
         if (selectedTag) {
           setSelectedTag(null);
           return;
@@ -157,40 +160,18 @@ export function App() {
       // فوکوس ثبت سریع: '/' یا 'n' یا 'N'
       if (e.key === "/" || e.key === "n" || e.key === "N") {
         e.preventDefault();
-        const input = document.querySelector<HTMLInputElement>("#quick-add-input");
-        input?.focus();
-        return;
-      }
-
-      // راهنما: '?' یا 'Shift+/'
-      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
-        e.preventDefault();
-        setHelpOpen((prev) => !prev);
-        return;
-      }
-
-      // قطع و وصل صدا: 's' یا 'S'
-      if (e.key === "s" || e.key === "S") {
-        e.preventDefault();
-        setSetting("sound", !db.settings.sound);
-        showToast(!db.settings.sound ? "صدای زنگ فعال شد" : "صدای زنگ خاموش شد");
-        return;
-      }
-
-      // قطع و وصل نوتیفیکیشن: 'b' یا 'B'
-      if (e.key === "b" || e.key === "B") {
-        e.preventDefault();
-        const next = !db.settings.notifications;
-        setSetting("notifications", next);
-        if (next) void requestNotificationPermission();
-        showToast(next ? "نوتیفیکیشن فعال شد" : "نوتیفیکیشن غیرفعال شد");
+        setShowInput(true);
+        setTimeout(() => {
+          const input = document.querySelector<HTMLInputElement>("#quick-add-input");
+          input?.focus();
+        }, 50);
         return;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [db.settings.sound, db.settings.notifications, helpOpen, digestOpen, selectedTag, toast]);
+  }, [selectedTag, toast]);
 
   const addTask = (raw: string) => {
     const p = parseInput(raw);
@@ -257,6 +238,12 @@ export function App() {
       tasks: prev.tasks.map((t) => (t.id === id ? { ...t, title: title.trim() || t.title } : t)),
     }));
 
+  const clearDone = () => {
+    const before = db;
+    update((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => !t.done) }));
+    showToast("تسک‌های انجام‌شده پاک شدند", () => setDb(before));
+  };
+
   const allTags = useMemo(() => {
     const set = new Set<string>();
     for (const t of db.tasks) {
@@ -293,83 +280,20 @@ export function App() {
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
 
   return (
-    <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-5 px-4 py-8 sm:py-14">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-bold tracking-tight text-white">daily</h1>
-          {due > 0 && (
-            <span className="rounded-full border border-red-500/40 bg-red-500/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
-              {due} سررسیدشده
-            </span>
-          )}
-        </div>
+    <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 py-6 sm:py-10">
+      <Header
+        db={db}
+        dueCount={due}
+        showInput={showInput}
+        onToggleInput={toggleInput}
+        onReplace={setDb}
+        onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
+        onUpdateSetting={setSetting}
+        onClearDone={clearDone}
+        onMessage={showToast}
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <SyncBar
-            db={db}
-            onReplace={setDb}
-            onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
-            onMessage={showToast}
-          />
-
-          <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="گزارش روزانه"
-              title="گزارش روزانه (Daily Digest)"
-              onClick={() => setDigestOpen(true)}
-            >
-              <FileText />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="راهنما"
-              title="راهنما و کلیدهای میانبر (؟)"
-              onClick={() => setHelpOpen(true)}
-            >
-              <HelpCircle />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="صدا"
-              title={db.settings.sound ? "صدا روشن (S)" : "صدا خاموش (S)"}
-              onClick={() => setSetting("sound", !db.settings.sound)}
-            >
-              {db.settings.sound ? (
-                <Volume2 className="text-zinc-200" />
-              ) : (
-                <VolumeX className="text-zinc-500" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="نوتیفیکیشن"
-              title={db.settings.notifications ? "نوتیف روشن (B)" : "نوتیف خاموش (B)"}
-              onClick={() => {
-                const next = !db.settings.notifications;
-                setSetting("notifications", next);
-                if (next) void requestNotificationPermission();
-              }}
-            >
-              {db.settings.notifications ? (
-                <Bell className="text-zinc-200" />
-              ) : (
-                <BellOff className="text-zinc-500" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <QuickAdd onAdd={addTask} />
-
-      <WeeklyStreak tasks={db.tasks} />
+      {showInput && <QuickAdd onAdd={addTask} />}
 
       {allTags.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 px-1 py-0.5 text-xs">
@@ -417,7 +341,7 @@ export function App() {
         }
       />
 
-      <main className="flex-1 space-y-6">
+      <main className="flex-1 space-y-5">
         <Group
           title="سررسید شده"
           tasks={groups.overdue}
@@ -455,20 +379,11 @@ export function App() {
         />
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
-            یه خط بنویس و Enter بزن. مثلاً «فردا ساعت ۹ جلسه با تیم !فوری #کار».
+            لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300">پیست</strong> از AI دیتای
+            جدید وارد کنید یا با کلید <strong className="text-zinc-300">/</strong> تسک بنویسید.
           </p>
         )}
       </main>
-
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/80 pt-4">
-        <SyncBar
-          db={db}
-          onReplace={setDb}
-          onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
-          onMessage={showToast}
-        />
-        <span className="text-xs text-zinc-400">همه‌چیز آفلاین روی مرورگر شما ذخیره می‌شود.</span>
-      </footer>
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
@@ -487,14 +402,6 @@ export function App() {
           )}
         </div>
       )}
-
-      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <DailyDigestModal
-        open={digestOpen}
-        db={db}
-        onClose={() => setDigestOpen(false)}
-        onMessage={showToast}
-      />
     </div>
   );
 }
