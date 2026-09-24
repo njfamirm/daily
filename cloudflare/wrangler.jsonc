@@ -7,6 +7,12 @@
     "directory": "../dist",
     "binding": "ASSETS",
   },
+  "routes": [
+    {
+      "pattern": "task.njfamirm.ir",
+      "custom_domain": true,
+    },
+  ],
   "kv_namespaces": [
     {
       "binding": "VAULTS",
