@@ -21,6 +21,10 @@ export function Notes({ notes, onAdd, onRemove }: Props) {
     setAdding(false);
   };
 
+  if (notes.length === 0 && !adding) {
+    return null;
+  }
+
   return (
     <section className="rounded-xl border border-zinc-800/80 bg-zinc-900/70 p-3.5 shadow-xs">
       <div className="mb-2 flex items-center justify-between">
@@ -32,18 +36,12 @@ export function Notes({ notes, onAdd, onRemove }: Props) {
           variant="ghost"
           size="icon"
           aria-label="افزودن نکته"
-          title="افزودن نکته (m)"
+          title="افزودن نکته (M)"
           onClick={() => setAdding(true)}
         >
           <Plus />
         </Button>
       </div>
-
-      {notes.length === 0 && !adding && (
-        <p className="px-1 pb-1 text-xs text-zinc-500">
-          چیزهایی که همیشه باید یادت باشه؛ مثلاً «گسترش بده به تلگرام».
-        </p>
-      )}
 
       <ul className="space-y-1.5">
         {notes.map((n) => (

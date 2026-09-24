@@ -250,7 +250,7 @@ export function App() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-5 px-4 py-8 sm:py-14">
-      <header className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
         <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight text-white">daily</h1>
           {due > 0 && (
@@ -259,46 +259,58 @@ export function App() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="راهنما"
-            title="راهنما و کلیدهای میانبر (؟)"
-            onClick={() => setHelpOpen(true)}
-          >
-            <HelpCircle />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="صدا"
-            title={db.settings.sound ? "صدا روشن (S)" : "صدا خاموش (S)"}
-            onClick={() => setSetting("sound", !db.settings.sound)}
-          >
-            {db.settings.sound ? (
-              <Volume2 className="text-zinc-200" />
-            ) : (
-              <VolumeX className="text-zinc-500" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="نوتیفیکیشن"
-            title={db.settings.notifications ? "نوتیف روشن (B)" : "نوتیف خاموش (B)"}
-            onClick={() => {
-              const next = !db.settings.notifications;
-              setSetting("notifications", next);
-              if (next) void requestNotificationPermission();
-            }}
-          >
-            {db.settings.notifications ? (
-              <Bell className="text-zinc-200" />
-            ) : (
-              <BellOff className="text-zinc-500" />
-            )}
-          </Button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <SyncBar
+            db={db}
+            onReplace={setDb}
+            onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
+            onMessage={showToast}
+          />
+
+          <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="راهنما"
+              title="راهنما و کلیدهای میانبر (؟)"
+              onClick={() => setHelpOpen(true)}
+            >
+              <HelpCircle />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="صدا"
+              title={db.settings.sound ? "صدا روشن (S)" : "صدا خاموش (S)"}
+              onClick={() => setSetting("sound", !db.settings.sound)}
+            >
+              {db.settings.sound ? (
+                <Volume2 className="text-zinc-200" />
+              ) : (
+                <VolumeX className="text-zinc-500" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="نوتیفیکیشن"
+              title={db.settings.notifications ? "نوتیف روشن (B)" : "نوتیف خاموش (B)"}
+              onClick={() => {
+                const next = !db.settings.notifications;
+                setSetting("notifications", next);
+                if (next) void requestNotificationPermission();
+              }}
+            >
+              {db.settings.notifications ? (
+                <Bell className="text-zinc-200" />
+              ) : (
+                <BellOff className="text-zinc-500" />
+              )}
+            </Button>
+          </div>
         </div>
       </header>
 
