@@ -173,7 +173,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
-            npx --yes wrangler deploy --config wrangler.toml
+            pnpm dlx wrangler deploy --config wrangler.toml
           else
             echo "CLOUDFLARE_API_TOKEN not set, skipping Cloudflare deploy"
           fi
