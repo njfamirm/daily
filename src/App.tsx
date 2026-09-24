@@ -7,6 +7,7 @@ import { fireConfettiAt } from "@/lib/confetti.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
+import { useAutoCloudSync } from "@/lib/useCloudSync.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
 import {
@@ -61,6 +62,13 @@ function computeSnoozeTime(preset: SnoozePreset): string {
 
 export function App() {
   const { db, setDb, update } = useDB();
+
+  // همگام‌سازی خودکار و زنده در پس‌زمینه بین تمام دستگاه‌ها
+  useAutoCloudSync({
+    db,
+    onApplyRemote: setDb,
+  });
+
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const [showInput, setShowInput] = useState(() => {
