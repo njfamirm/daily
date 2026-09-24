@@ -1,26 +1,28 @@
 {
   "name": "daily",
   "short_name": "daily",
-  "description": "مدیریت وظایف و یادداشت‌های روزانه",
+  "description": "مدیریت وظایف و یادداشت‌های روزانه متمرکز بر اولویت‌ها",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#141417",
+  "theme_color": "#141417",
   "dir": "rtl",
   "lang": "fa",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icon.svg",
