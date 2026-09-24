@@ -34,6 +34,34 @@ export function saveSyncConfig(cfg: SyncConfig) {
   } catch {}
 }
 
+/**
+ * تولید رشته فشرده برای جفت‌سازی سریع و تولید QR Code
+ */
+export function encodeSyncPairingToken(cfg: SyncConfig): string {
+  const payload = {
+    s: cfg.serverUrl || "",
+    v: cfg.vaultId || "",
+    k: cfg.secretKey || "",
+    t: cfg.authToken || "",
+  };
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+
+/**
+ * بازخوانی اطلاعات اتصال از روی توکن یا QR Code
+ */
+export function decodeSyncPairingToken(token: string): Partial<SyncConfig> {
+  const json = decodeURIComponent(escape(atob(token.trim())));
+  const data = JSON.parse(json);
+  return {
+    serverUrl: data.s || "",
+    vaultId: data.v || "",
+    secretKey: data.k || "",
+    authToken: data.t || "",
+    enabled: true,
+  };
+}
+
 function getAuthHeaders(authToken?: string): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (authToken && authToken.trim()) {

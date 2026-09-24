@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button.tsx";
 import {
+  decodeSyncPairingToken,
+  encodeSyncPairingToken,
   loadSyncConfig,
   pullFromVault,
   pushToVault,
@@ -9,7 +11,20 @@ import {
 import { mergeDBs } from "@/lib/syncEngine.ts";
 import type { DB } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
-import { Check, Cloud, HelpCircle, KeyRound, Lock, RefreshCw, ShieldCheck, X } from "lucide-react";
+import {
+  Check,
+  ClipboardCopy,
+  Cloud,
+  HelpCircle,
+  KeyRound,
+  Lock,
+  QrCode,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
+import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 
 interface Props {
@@ -25,6 +40,40 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
   const [isSyncing, setIsSyncing] = useState(false);
   const [serverStatus, setServerStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
+
+  // مدال و بارکد اتصال سریع
+  const [showPairQr, setShowPairQr] = useState(false);
+  const [pairingQrUrl, setPairingQrUrl] = useState<string>("");
+  const [pastePairToken, setPastePairToken] = useState("");
+  const [isPairCopied, setIsPairCopied] = useState(false);
+
+  // تولید QR Code جفت‌سازی بر اساس کانفیگ فعلی
+  useEffect(() => {
+    if (!open || !showPairQr) return;
+    if (
+      !syncConfig.serverUrl.trim() ||
+      !syncConfig.vaultId.trim() ||
+      !syncConfig.secretKey.trim()
+    ) {
+      setPairingQrUrl("");
+      return;
+    }
+
+    try {
+      const token = encodeSyncPairingToken(syncConfig);
+      void QRCode.toDataURL(token, {
+        margin: 1,
+        width: 260,
+        errorCorrectionLevel: "M",
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      }).then(setPairingQrUrl);
+    } catch {
+      setPairingQrUrl("");
+    }
+  }, [open, showPairQr, syncConfig]);
 
   // بستن مدال با Escape
   useEffect(() => {
@@ -70,27 +119,19 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
   };
 
   // همگام‌سازی ابری دوطرفه (Pull -> Merge -> Push)
-  const handleCloudSync = async () => {
-    if (
-      !syncConfig.serverUrl.trim() ||
-      !syncConfig.vaultId.trim() ||
-      !syncConfig.secretKey.trim()
-    ) {
+  const handleCloudSync = async (overrideCfg?: SyncConfig) => {
+    const cfg = overrideCfg || syncConfig;
+    if (!cfg.serverUrl.trim() || !cfg.vaultId.trim() || !cfg.secretKey.trim()) {
       onMessage("لطفاً آدرس سرور، کد والت و رمز اختصاصی را کامل کنید");
       return;
     }
 
     setIsSyncing(true);
     try {
-      saveSyncConfig(syncConfig);
+      saveSyncConfig(cfg);
 
       // ۱. پول کردن از والت سرور
-      const remote = await pullFromVault(
-        syncConfig.serverUrl,
-        syncConfig.vaultId,
-        syncConfig.secretKey,
-        syncConfig.authToken,
-      );
+      const remote = await pullFromVault(cfg.serverUrl, cfg.vaultId, cfg.secretKey, cfg.authToken);
 
       let finalDb = db;
       if (remote) {
@@ -100,16 +141,10 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
       }
 
       // ۳. پوش نسخه نهایی
-      await pushToVault(
-        syncConfig.serverUrl,
-        syncConfig.vaultId,
-        syncConfig.secretKey,
-        finalDb,
-        syncConfig.authToken,
-      );
+      await pushToVault(cfg.serverUrl, cfg.vaultId, cfg.secretKey, finalDb, cfg.authToken);
 
       const now = Date.now();
-      const updatedConfig = { ...syncConfig, lastSyncedAt: now, enabled: true };
+      const updatedConfig = { ...cfg, lastSyncedAt: now, enabled: true };
       setSyncConfig(updatedConfig);
       saveSyncConfig(updatedConfig);
 
@@ -118,6 +153,26 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
       onMessage(`خطا در همگام‌سازی: ${err instanceof Error ? err.message : "خطای ناشناخته"}`);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // اعمال توکن جفت‌سازی (Pairing Token) وارد شده از دستگاه دیگر
+  const handleApplyPairToken = () => {
+    if (!pastePairToken.trim()) return;
+    try {
+      const parsed = decodeSyncPairingToken(pastePairToken);
+      const next: SyncConfig = {
+        ...syncConfig,
+        ...parsed,
+        enabled: true,
+      };
+      setSyncConfig(next);
+      saveSyncConfig(next);
+      setPastePairToken("");
+      onMessage("تنظیمات اتصال از بارکد/توکن بازخوانی شد؛ در حال همگام‌سازی…");
+      void handleCloudSync(next);
+    } catch {
+      onMessage("کد اتصال نامعتبر است");
     }
   };
 
@@ -133,6 +188,11 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
     saveSyncConfig(next);
     onMessage(`کد والت جدید ساخته شد: ${code}`);
   };
+
+  const isConfigReady =
+    Boolean(syncConfig.serverUrl.trim()) &&
+    Boolean(syncConfig.vaultId.trim()) &&
+    Boolean(syncConfig.secretKey.trim());
 
   return (
     <div
@@ -150,7 +210,9 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
               <Cloud className="size-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-zinc-100">همگام‌سازی سرور شخصی (E2EE)</h2>
+              <h2 className="text-base font-semibold text-zinc-100">
+                همگام‌سازی ابری TaskDrop (E2EE)
+              </h2>
               <p className="text-[11px] text-zinc-400">
                 سینک ایمن دوطرفه با رمزنگاری سرتاسری ۲۵۶ بیتی روی دستگاه شما
               </p>
@@ -161,8 +223,83 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
           </Button>
         </div>
 
-        {/* فرم تنظیمات سرور شخصی */}
         <div className="space-y-4">
+          {/* کارت اتصال سریع (اسکن QR یا پیست کلید اتصال) */}
+          <div className="rounded-xl border border-sky-900/50 bg-sky-950/20 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-sky-300">
+                <Sparkles className="size-3.5 text-sky-400" />
+                اتصال سریع بین دستگاه‌ها
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPairQr((p) => !p)}
+                disabled={!isConfigReady}
+                className={cn(
+                  "flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-lg border transition-colors cursor-pointer",
+                  isConfigReady
+                    ? "bg-sky-900/40 text-sky-300 border-sky-700/60 hover:bg-sky-800/50"
+                    : "text-zinc-600 border-zinc-800 cursor-not-allowed",
+                )}
+              >
+                <QrCode className="size-3" />
+                <span>{showPairQr ? "بستن بارکد" : "نمایش بارکد اتصال سریع"}</span>
+              </button>
+            </div>
+
+            {/* بخش نمایش بارکد اتصال سریع */}
+            {showPairQr && isConfigReady && (
+              <div className="my-3 flex flex-col items-center rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
+                {pairingQrUrl ? (
+                  <div className="overflow-hidden rounded-xl border-4 border-white bg-white shadow-lg">
+                    <img src={pairingQrUrl} alt="Pairing QR" className="size-44 sm:size-48" />
+                  </div>
+                ) : (
+                  <div className="py-8 text-xs text-zinc-500">در حال تولید بارکد…</div>
+                )}
+                <p className="mt-2 text-center text-[11px] text-zinc-300">
+                  این بارکد را با دوربین گوشی یا دستگاه دوم اسکن کنید تا تمام اطلاعات و رمز خودکار
+                  وارد شود.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const token = encodeSyncPairingToken(syncConfig);
+                    await navigator.clipboard.writeText(token);
+                    setIsPairCopied(true);
+                    onMessage("کلید جفت‌سازی کپی شد");
+                    setTimeout(() => setIsPairCopied(false), 2000);
+                  }}
+                  className="mt-2 flex items-center gap-1 text-xs text-sky-400 hover:underline cursor-pointer"
+                >
+                  <ClipboardCopy className="size-3" />
+                  <span>
+                    {isPairCopied ? "کپی شد!" : "کپی رشته اتصال برای پیست در دستگاه دیگر"}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* پیست کلید اتصال برای دستگاه مقصد */}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={pastePairToken}
+                onChange={(e) => setPastePairToken(e.target.value)}
+                placeholder="پیست کلید اتصال دریافت شده از دستگاه دیگر…"
+                className="flex-1 rounded-lg border border-sky-900/70 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-100 font-mono outline-none focus:border-sky-500"
+              />
+              <Button
+                size="sm"
+                onClick={handleApplyPairToken}
+                disabled={!pastePairToken.trim()}
+                className="bg-sky-600 text-white hover:bg-sky-500 text-xs font-semibold px-3"
+              >
+                جفت‌سازی فوری
+              </Button>
+            </div>
+          </div>
+
+          {/* فرم تنظیمات سرور شخصی */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 space-y-3">
             {/* آدرس سرور */}
             <div>
@@ -286,7 +423,7 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
 
             {/* دکمه همگام‌سازی فوری */}
             <Button
-              onClick={handleCloudSync}
+              onClick={() => void handleCloudSync()}
               disabled={isSyncing}
               className="w-full gap-2 bg-sky-600 text-white hover:bg-sky-500 font-semibold text-xs mt-2"
             >
