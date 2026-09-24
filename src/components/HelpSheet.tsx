@@ -7,17 +7,23 @@ interface Row {
   meaning: string;
 }
 
+const PRIORITY_ROWS: Row[] = [
+  { pattern: "!فوری / !مهم / فوری / ضروری", meaning: "اولویت بالا (نوار و نشانگر قرمز)" },
+  { pattern: "!متوسط / اولویت متوسط", meaning: "اولویت متوسط (نوار نارنجی)" },
+  { pattern: "!کم / سر فرصت / هر وقت شد", meaning: "اولویت پایین (نوار آبی)" },
+];
+
 const DATE_ROWS: Row[] = [
   { pattern: "امروز / فردا / پس‌فردا", meaning: "همان روز، ساعت پیش‌فرض ۹:۰۰" },
-  { pattern: "دوشنبه", meaning: "دوشنبهٔ همین هفته یا هفتهٔ بعد (هر کدام جلوتر است)" },
-  { pattern: "دوشنبه هفته بعد", meaning: "دوشنبهٔ هفتهٔ بعد، حتماً یک هفته جلوتر" },
-  { pattern: "۱۴۰۴/۰۷/۱۲ یا 2026-09-28", meaning: "تاریخ مطلق" },
+  { pattern: "آخر هفته / پایان هفته", meaning: "پنج‌شنبه ساعت ۹:۰۰" },
+  { pattern: "دوشنبه / شنبه هفته بعد", meaning: "روز مشخص هفته" },
+  { pattern: "۱۴۰۴/۰۷/۱۲ یا 2026-09-28", meaning: "تاریخ تقویمی" },
 ];
 
 const TIME_ROWS: Row[] = [
-  { pattern: "ساعت ۱۰ / ساعت 22:30", meaning: "زمان مشخص در همان روز" },
-  { pattern: "۸ صبح / ۹pm / ۵ عصر", meaning: "ساعت با تشخیص قبل/بعدازظهر" },
-  { pattern: "+۲ ساعت دیگه / ۳۰ دقیقه دیگه / ۳ روز دیگه", meaning: "نسبت به همین الان" },
+  { pattern: "اول صبح / صبح / ظهر / عصر / غروب / شب / آخر شب", meaning: "بازه زمانی مشخص در روز" },
+  { pattern: "ساعت ۱۰ / ساعت 22:30 / ۸ صبح / ۹pm", meaning: "ساعت دقیق عددی" },
+  { pattern: "نیم ساعت دیگه / یک ربع دیگه / +۲ ساعت دیگه", meaning: "نسبت به همین لحظه" },
 ];
 
 const REPEAT_ROWS: Row[] = [
@@ -33,11 +39,11 @@ const SHORTCUT_ROWS: Row[] = [
   { pattern: "S", meaning: "قطع / وصل صدای زنگ" },
   { pattern: "B", meaning: "فعال / غیرفعال‌سازی نوتیفیکیشن" },
   { pattern: "Ctrl + Z / ⌘Z", meaning: "بازگرداندن (Undo) آخرین تسک حذف‌شده" },
-  { pattern: "Esc", meaning: "بستن پنجره‌ها یا انصراف از ویرایش" },
+  { pattern: "Esc", meaning: "بستن پنجره‌ها یا لغو فیلتر برچسب" },
 ];
 
 const OTHER_ROWS: Row[] = [
-  { pattern: "#برچسب", meaning: "هر کلمه‌ای که با # شروع شود، تگ می‌شود" },
+  { pattern: "#کار / #پروژه / #خرید / #شخصی", meaning: "برچسب‌های رنگی و قابل‌فیلتر" },
   { pattern: "بدون هیچ‌کدام از بالا", meaning: "فقط یک تسک بدون موعد ثبت می‌شود" },
 ];
 
@@ -104,6 +110,7 @@ export function HelpSheet({ open, onClose }: Props) {
 
         <div className="space-y-4">
           <Table title="⌨️ کلیدهای میانبر (Shortcuts)" rows={SHORTCUT_ROWS} />
+          <Table title="🚨 اولویت‌بندی" rows={PRIORITY_ROWS} />
           <Table title="📅 تاریخ" rows={DATE_ROWS} />
           <Table title="⏰ ساعت" rows={TIME_ROWS} />
           <Table title="🔁 تکرار" rows={REPEAT_ROWS} />

@@ -1,4 +1,5 @@
 export type Repeat = "none" | "daily" | "weekly" | "monthly";
+export type Priority = "none" | "low" | "medium" | "high";
 
 export interface Task {
   /** شناسه یکتا */
@@ -9,6 +10,8 @@ export interface Task {
   due: string | null;
   /** تکرار خودکار بعد از انجام‌شدن/سررسید */
   repeat: Repeat;
+  /** درجه اولویت */
+  priority: Priority;
   done: boolean;
   createdAt: string;
   doneAt: string | null;

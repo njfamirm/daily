@@ -29,6 +29,7 @@ export function App() {
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const firedRef = useRef(false);
 
   const showToast = (text: string, undo?: () => void) => {
@@ -112,10 +113,14 @@ export function App() {
         return;
       }
 
-      // Escape برای بستن مدال راهنما
+      // Escape برای بستن مدال راهنما یا لغو فیلتر تگ
       if (e.key === "Escape") {
         if (helpOpen) {
           setHelpOpen(false);
+          return;
+        }
+        if (selectedTag) {
+          setSelectedTag(null);
           return;
         }
       }
@@ -159,7 +164,7 @@ export function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [db.settings.sound, db.settings.notifications, helpOpen, toast]);
+  }, [db.settings.sound, db.settings.notifications, helpOpen, selectedTag, toast]);
 
   const addTask = (raw: string) => {
     const p = parseInput(raw);
@@ -169,6 +174,7 @@ export function App() {
       title: p.title,
       due: p.due ? p.due.toISOString() : null,
       repeat: p.repeat,
+      priority: p.priority,
       done: false,
       createdAt: new Date().toISOString(),
       doneAt: null,
@@ -207,20 +213,37 @@ export function App() {
       tasks: prev.tasks.map((t) => (t.id === id ? { ...t, title: title.trim() || t.title } : t)),
     }));
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of db.tasks) {
+      for (const tag of t.tags) set.add(tag);
+    }
+    return Array.from(set);
+  }, [db.tasks]);
+
   const groups = useMemo(() => {
-    const open = db.tasks.filter((t) => !t.done);
+    const filtered = selectedTag ? db.tasks.filter((t) => t.tags.includes(selectedTag)) : db.tasks;
+    const open = filtered.filter((t) => !t.done);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
-    const byDue = (a: Task, b: Task) => ts(a) - ts(b);
+    const byDue = (a: Task, b: Task) => {
+      // تسک‌های با اولویت بالا در صورت تاریخ برابر یا بدون تاریخ بالاتر قرار می‌گیرند
+      const pWeight = { high: 0, medium: 1, low: 2, none: 3 };
+      const timeDiff = ts(a) - ts(b);
+      if (timeDiff === 0 || (!a.due && !b.due)) {
+        return pWeight[a.priority || "none"] - pWeight[b.priority || "none"];
+      }
+      return timeDiff;
+    };
     return {
       overdue: open.filter((t) => t.due && ts(t) <= now).sort(byDue),
       today: open.filter((t) => t.due && ts(t) > now && ts(t) <= endOfToday.getTime()).sort(byDue),
       later: open.filter((t) => t.due && ts(t) > endOfToday.getTime()).sort(byDue),
-      someday: open.filter((t) => !t.due),
-      done: db.tasks.filter((t) => t.done).slice(0, 20),
+      someday: open.filter((t) => !t.due).sort(byDue),
+      done: filtered.filter((t) => t.done).slice(0, 20),
     };
-  }, [db.tasks, now]);
+  }, [db.tasks, now, selectedTag]);
 
   const setSetting = <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) =>
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
@@ -281,6 +304,39 @@ export function App() {
 
       <QuickAdd onAdd={addTask} />
 
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-1 py-0.5 text-xs">
+          <span className="text-zinc-500 text-[11px]">فیلتر برچسب:</span>
+          {allTags.map((tag) => {
+            const isSelected = selectedTag === tag;
+            return (
+              <button
+                type="button"
+                key={tag}
+                onClick={() => setSelectedTag(isSelected ? null : tag)}
+                className={cn(
+                  "rounded-md border px-2 py-0.5 font-medium transition-all cursor-pointer text-[11px]",
+                  isSelected
+                    ? "border-white bg-white text-black font-semibold shadow-xs"
+                    : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200",
+                )}
+              >
+                #{tag}
+              </button>
+            );
+          })}
+          {selectedTag && (
+            <button
+              type="button"
+              onClick={() => setSelectedTag(null)}
+              className="text-[11px] font-medium text-amber-400 underline underline-offset-2 hover:text-amber-300 ms-1 cursor-pointer"
+            >
+              نمایش همه
+            </button>
+          )}
+        </div>
+      )}
+
       <Notes
         notes={db.notes}
         onAdd={(text) =>
@@ -295,14 +351,40 @@ export function App() {
       />
 
       <main className="flex-1 space-y-6">
-        <Group title="سررسید شده" tasks={groups.overdue} alert {...{ toggle, remove, rename }} />
-        <Group title="امروز" tasks={groups.today} {...{ toggle, remove, rename }} />
-        <Group title="بعداً" tasks={groups.later} {...{ toggle, remove, rename }} />
-        <Group title="بدون زمان" tasks={groups.someday} {...{ toggle, remove, rename }} />
-        <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
+        <Group
+          title="سررسید شده"
+          tasks={groups.overdue}
+          alert
+          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          {...{ toggle, remove, rename }}
+        />
+        <Group
+          title="امروز"
+          tasks={groups.today}
+          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          {...{ toggle, remove, rename }}
+        />
+        <Group
+          title="بعداً"
+          tasks={groups.later}
+          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          {...{ toggle, remove, rename }}
+        />
+        <Group
+          title="بدون زمان"
+          tasks={groups.someday}
+          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          {...{ toggle, remove, rename }}
+        />
+        <Group
+          title="انجام‌شده"
+          tasks={groups.done}
+          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          {...{ toggle, remove, rename }}
+        />
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
-            یه خط بنویس و Enter بزن. مثلاً «فردا ساعت ۹ چک کن آپدیت اومده».
+            یه خط بنویس و Enter بزن. مثلاً «فردا ساعت ۹ جلسه با تیم !فوری #کار».
           </p>
         )}
       </main>
@@ -342,6 +424,7 @@ function Group({
   toggle,
   remove,
   rename,
+  onTagClick,
 }: {
   title: string;
   tasks: Task[];
@@ -349,6 +432,7 @@ function Group({
   toggle: (id: string) => void;
   remove: (id: string) => void;
   rename: (id: string, title: string) => void;
+  onTagClick?: (tag: string) => void;
 }) {
   if (tasks.length === 0) return null;
   return (
@@ -371,7 +455,14 @@ function Group({
       </h2>
       <div className="space-y-1.5">
         {tasks.map((t) => (
-          <TaskItem key={t.id} task={t} onToggle={toggle} onDelete={remove} onRename={rename} />
+          <TaskItem
+            key={t.id}
+            task={t}
+            onToggle={toggle}
+            onDelete={remove}
+            onRename={rename}
+            onTagClick={onTagClick}
+          />
         ))}
       </div>
     </section>

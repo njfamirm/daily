@@ -1,9 +1,10 @@
-import type { Repeat } from "@/lib/types.ts";
+import type { Priority, Repeat } from "@/lib/types.ts";
 
 export interface Parsed {
   title: string;
   due: Date | null;
   repeat: Repeat;
+  priority: Priority;
   tags: string[];
 }
 
@@ -51,9 +52,16 @@ const REPEAT_RULES: [RegExp, Repeat][] = [
   [word("هر ?ماه|ماهانه|ماهیانه|monthly|!monthly"), "monthly"],
 ];
 
+const RE_HIGH_PRIORITY = word(
+  "!مهم|!فوری|!urgent|!high|!ضروری|!p1|!1|فوری|خیلی مهم|اولویت بالا|ضروری",
+);
+const RE_MED_PRIORITY = word("!متوسط|!med|!medium|!p2|!2|اولویت متوسط");
+const RE_LOW_PRIORITY = word("!کم|!low|!p3|!3|اولویت پایین|سر فرصت|هر وقت شد");
+
 const RE_DAY_AFTER_TOMORROW = word("پس ?فردا|day after tomorrow");
 const RE_TOMORROW = word("فردا|tomorrow|tmr");
 const RE_TODAY = word("امروز|today");
+const RE_WEEKEND = word("آخر هفته|پایان هفته|weekend");
 const RE_NEXT_WEEK = word("هفته (?:بعد|آینده|دیگه|دیگر)|next week");
 
 function atTime(base: Date, h: number, m: number) {
@@ -70,7 +78,7 @@ function startOfDay(d: Date) {
 
 /**
  * یک خط ورودی را به تسک تبدیل می‌کند.
- * مثال: «دوشنبه هفته بعد ساعت ۱۰ کوک کنم #کار» یا «+۲ ساعت دیگه چک کن آپدیت رو».
+ * مثال: «دوشنبه هفته بعد ساعت ۱۰ کوک کنم !فوری #کار» یا «+۲ ساعت دیگه چک کن آپدیت رو».
  */
 export function parseInput(input: string, now = new Date()): Parsed {
   let s = normalize(input);
@@ -80,6 +88,26 @@ export function parseInput(input: string, now = new Date()): Parsed {
     tags.push(t);
     return " ";
   });
+
+  // اولویت
+  let priority: Priority = "none";
+  if (RE_HIGH_PRIORITY.test(s)) {
+    priority = "high";
+    s = s.replace(RE_HIGH_PRIORITY, " ");
+  } else if (RE_MED_PRIORITY.test(s)) {
+    priority = "medium";
+    s = s.replace(RE_MED_PRIORITY, " ");
+  } else if (RE_LOW_PRIORITY.test(s)) {
+    priority = "low";
+    s = s.replace(RE_LOW_PRIORITY, " ");
+  }
+
+  // اگر در تگ‌ها کلمه مهم یا فوری بود اولویت بالا اعمال شود
+  if (priority === "none") {
+    if (tags.some((t) => /^(مهم|فوری|urgent|ضروری)$/i.test(t))) priority = "high";
+    else if (tags.some((t) => /^(متوسط|med)$/i.test(t))) priority = "medium";
+    else if (tags.some((t) => /^(کم|low)$/i.test(t))) priority = "low";
+  }
 
   let repeat: Repeat = "none";
   for (const [re, r] of REPEAT_RULES) {
@@ -92,6 +120,20 @@ export function parseInput(input: string, now = new Date()): Parsed {
 
   let day: Date | null = null;
   let time: { h: number; m: number } | null = null;
+
+  // عبارت‌های زمانی متنی خاص مثل «نیم ساعت دیگه»، «یک ربع دیگه»
+  if (word("نیم ساعت دیگه|نیم ساعت بعد|۳۰ دقیقه دیگه").test(s)) {
+    s = s.replace(word("نیم ساعت دیگه|نیم ساعت بعد|۳۰ دقیقه دیگه"), " ");
+    return { title: clean(s), due: new Date(now.getTime() + 30 * 60_000), repeat, priority, tags };
+  }
+  if (word("یک ربع دیگه|یه ربع دیگه|۱۵ دقیقه دیگه").test(s)) {
+    s = s.replace(word("یک ربع دیگه|یه ربع دیگه|۱۵ دقیقه دیگه"), " ");
+    return { title: clean(s), due: new Date(now.getTime() + 15 * 60_000), repeat, priority, tags };
+  }
+  if (word("یک ساعت دیگه|یه ساعت دیگه|۱ ساعت دیگه").test(s)) {
+    s = s.replace(word("یک ساعت دیگه|یه ساعت دیگه|۱ ساعت دیگه"), " ");
+    return { title: clean(s), due: new Date(now.getTime() + 60 * 60_000), repeat, priority, tags };
+  }
 
   // «+2h» / «۲ ساعت دیگه» / «۱۰ دقیقه دیگه» / «3 روز دیگه»
   const rel =
@@ -109,7 +151,7 @@ export function parseInput(input: string, now = new Date()): Parsed {
     else if (/^(d|day|روز)$/.test(unit)) d.setDate(d.getDate() + n);
     else d.setDate(d.getDate() + n * 7);
     s = s.replace(rel[0], " ");
-    return { title: clean(s), due: d, repeat, tags };
+    return { title: clean(s), due: d, repeat, priority, tags };
   }
 
   // تاریخ مطلق: 1404/07/12 یا 2026-09-28
@@ -129,6 +171,13 @@ export function parseInput(input: string, now = new Date()): Parsed {
     } else if (RE_TODAY.test(s)) {
       day = startOfDay(now);
       s = s.replace(RE_TODAY, " ");
+    } else if (RE_WEEKEND.test(s)) {
+      // پنجشنبه
+      const d = startOfDay(now);
+      const delta = (4 - d.getDay() + 7) % 7 || 7;
+      d.setDate(d.getDate() + delta);
+      day = d;
+      s = s.replace(RE_WEEKEND, " ");
     }
   }
 
@@ -149,7 +198,31 @@ export function parseInput(input: string, now = new Date()): Parsed {
     if (!day && nextWeek) day = startOfDay(new Date(now.getTime() + 7 * 864e5));
   }
 
-  // ساعت: «ساعت 10»، «10:30»، «at 9:15»، «۸ صبح»، «9pm»
+  // زمان‌های نام‌دار روز: اول صبح (7:00)، صبح (8:30)، ظهر (12:30)، عصر (17:00)، غروب (19:00)، شب (21:00)، آخر شب (23:00)
+  if (word("اول صبح").test(s)) {
+    time = { h: 7, m: 0 };
+    s = s.replace(word("اول صبح"), " ");
+  } else if (word("آخر شب|نیمه شب").test(s)) {
+    time = { h: 23, m: 0 };
+    s = s.replace(word("آخر شب|نیمه شب"), " ");
+  } else if (word("غروب").test(s)) {
+    time = { h: 19, m: 0 };
+    s = s.replace(word("غروب"), " ");
+  } else if (word("عصر").test(s) && !/ساعت/.test(s)) {
+    time = { h: 17, m: 0 };
+    s = s.replace(word("عصر"), " ");
+  } else if (word("ظهر").test(s) && !/ساعت/.test(s)) {
+    time = { h: 12, m: 30 };
+    s = s.replace(word("ظهر"), " ");
+  } else if (word("صبح").test(s) && !/ساعت/.test(s)) {
+    time = { h: 8, m: 30 };
+    s = s.replace(word("صبح"), " ");
+  } else if (word("شب").test(s) && !/ساعت/.test(s)) {
+    time = { h: 21, m: 0 };
+    s = s.replace(word("شب"), " ");
+  }
+
+  // ساعت عددی: «ساعت 10»، «10:30»، «at 9:15»، «۸ صبح»، «9pm»
   const t = /(?:ساعت\s*|at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|صبح|ظهر|عصر|شب|بعدازظهر)?/.exec(
     s,
   );
@@ -174,7 +247,7 @@ export function parseInput(input: string, now = new Date()): Parsed {
     if (due.getTime() <= now.getTime()) due = new Date(due.getTime() + 864e5);
   }
 
-  return { title: clean(s), due, repeat, tags };
+  return { title: clean(s), due, repeat, priority, tags };
 }
 
 function clean(s: string) {

@@ -1,7 +1,9 @@
 import { Input } from "@/components/ui/input.tsx";
 import { formatDue, parseInput } from "@/lib/parse.ts";
 import { unlockAudio } from "@/lib/notify.ts";
-import { CornerDownLeft } from "lucide-react";
+import { getTagStyle } from "@/lib/tags.ts";
+import { cn } from "@/lib/utils.ts";
+import { CornerDownLeft, Flame } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 interface Props {
@@ -22,7 +24,7 @@ export function QuickAdd({ onAdd }: Props) {
         id="quick-add-input"
         autoFocus
         value={value}
-        placeholder="چی یادت نره؟  مثلاً: فردا ساعت ۱۰ پیگیری پروژه #کار"
+        placeholder="چی یادت نره؟  مثلاً: فردا ساعت ۱۰ جلسه فنی !فوری #کار"
         onChange={(e) => setValue(e.target.value)}
         onFocus={unlockAudio}
         onKeyDown={(e) => {
@@ -45,9 +47,20 @@ export function QuickAdd({ onAdd }: Props) {
       </div>
       {preview && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2 px-1 text-xs">
-          <span className="font-medium text-zinc-200">{preview.title || "…"}</span>
+          <span className="font-semibold text-zinc-100">{preview.title || "…"}</span>
+          {preview.priority === "high" && (
+            <span className="inline-flex items-center gap-1 rounded-md border border-red-800/80 bg-red-950/80 px-2 py-0.5 text-[11px] font-semibold text-red-300">
+              <Flame className="size-3 text-red-400" />
+              فوری
+            </span>
+          )}
+          {preview.priority === "medium" && (
+            <span className="inline-flex items-center rounded-md border border-amber-800/80 bg-amber-950/80 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+              اولویت متوسط
+            </span>
+          )}
           {preview.due && (
-            <span className="rounded-md bg-white px-2.5 py-0.5 font-medium text-black shadow-xs">
+            <span className="rounded-md bg-white px-2.5 py-0.5 font-semibold text-black shadow-xs">
               {formatDue(preview.due.toISOString())}
             </span>
           )}
@@ -56,14 +69,22 @@ export function QuickAdd({ onAdd }: Props) {
               {{ daily: "هر روز", weekly: "هر هفته", monthly: "هر ماه" }[preview.repeat]}
             </span>
           )}
-          {preview.tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-md border border-zinc-700/80 bg-zinc-800/60 px-2 py-0.5 text-zinc-300"
-            >
-              #{t}
-            </span>
-          ))}
+          {preview.tags.map((t) => {
+            const style = getTagStyle(t);
+            return (
+              <span
+                key={t}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium",
+                  style.bg,
+                  style.text,
+                  style.border,
+                )}
+              >
+                <span className={cn("size-1.5 rounded-full", style.dot)} />#{t}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>

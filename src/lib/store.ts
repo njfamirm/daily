@@ -1,9 +1,17 @@
-import { DEFAULT_DB, type DB, type Note, type Repeat, type Task } from "@/lib/types.ts";
+import {
+  DEFAULT_DB,
+  type DB,
+  type Note,
+  type Priority,
+  type Repeat,
+  type Task,
+} from "@/lib/types.ts";
 import { uid } from "@/lib/utils.ts";
 
 const KEY = "daily.db.v1";
 
 const REPEATS: Repeat[] = ["none", "daily", "weekly", "monthly"];
+const PRIORITIES: Priority[] = ["none", "low", "medium", "high"];
 
 function str(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -25,11 +33,13 @@ function normalizeTask(raw: unknown): Task | null {
   const title = str(t.title).trim();
   if (!title) return null;
   const repeat = REPEATS.includes(t.repeat as Repeat) ? (t.repeat as Repeat) : "none";
+  const priority = PRIORITIES.includes(t.priority as Priority) ? (t.priority as Priority) : "none";
   return {
     id: str(t.id) || uid(),
     title,
     due: isoOrNull(t.due),
     repeat,
+    priority,
     done: bool(t.done, false),
     createdAt: isoOrNull(t.createdAt) ?? new Date().toISOString(),
     doneAt: isoOrNull(t.doneAt),
