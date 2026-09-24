@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -30,6 +29,14 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+input,
+button,
+textarea,
+select,
+kbd {
+  font-family: inherit;
 }
 
 * {

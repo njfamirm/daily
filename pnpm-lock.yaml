@@ -178,6 +178,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/vazirmatn':
+        specifier: ^5.3.0
+        version: 5.3.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -238,6 +241,9 @@ packages:
 
   '@blazediff/core@1.9.1':
     resolution: {integrity: sha512-ehg3jIkYKulZh+8om/O25vkvSsXXwC+skXmyA87FFx6A/45eqOkZsBltMw/TVteb0mloiGT8oGRTcjRAz66zaA==}
+
+  '@fontsource/vazirmatn@5.3.0':
+    resolution: {integrity: sha512-XC/2yN2r5gwhFT3klSuWaqncODX2DOfRYfNmbyzgtWYxHxMC+tcoaX+tgggrm6hSkEgpR1TuSDEf1PiI91G7qg==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1428,6 +1434,8 @@ snapshots:
   '@babel/runtime@7.29.7': {}
 
   '@blazediff/core@1.9.1': {}
+
+  '@fontsource/vazirmatn@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
