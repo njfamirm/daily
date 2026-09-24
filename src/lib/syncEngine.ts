@@ -1,6 +1,6 @@
 import type { DB, Note, Task } from "@/lib/types.ts";
 
-const TOMBSTONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // ۳۰ روز نگهداری رد حذف
+const TOMBSTONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // Retain deletion tombstones for 30 days
 
 function getTaskTime(t: Task): number {
   const dateStr = t.updatedAt || t.doneAt || t.createdAt;
@@ -15,18 +15,18 @@ function getNoteTime(n: Note): number {
 }
 
 /**
- * الگوریتم ادغام هوشمند دو دیتابیس بدون از دست رفتن اطلاعات (Conflict-Free LWW with Tombstones)
+ * Conflict-Free Last-Write-Wins (LWW) database merge engine with tombstones
  */
 export function mergeDBs(local: DB, incoming: DB): DB {
   const now = Date.now();
   const taskMap = new Map<string, Task>();
 
-  // ۱. اضافه کردن تسک‌های محلی
+  // 1. Index local tasks
   for (const t of local.tasks) {
     taskMap.set(t.id, t);
   }
 
-  // ادغام تسک‌های ورودی
+  // Merge incoming tasks
   for (const inTask of incoming.tasks) {
     const locTask = taskMap.get(inTask.id);
     if (!locTask) {
@@ -40,7 +40,6 @@ export function mergeDBs(local: DB, incoming: DB): DB {
       } else if (locTime > inTime) {
         taskMap.set(locTask.id, locTask);
       } else {
-        // در صورت برابری زمان
         const deletedAt = inTask.deletedAt || locTask.deletedAt || null;
         taskMap.set(inTask.id, {
           ...inTask,
@@ -52,7 +51,7 @@ export function mergeDBs(local: DB, incoming: DB): DB {
     }
   }
 
-  // پاک‌سازی توم‌استون‌های قدیمی تسک‌ها (بیش از ۳۰ روز)
+  // Clean up expired tombstones (> 30 days)
   const mergedTasks: Task[] = [];
   for (const t of taskMap.values()) {
     if (t.deletedAt) {
@@ -65,7 +64,7 @@ export function mergeDBs(local: DB, incoming: DB): DB {
     }
   }
 
-  // ۲. ادغام یادداشت‌ها
+  // 2. Merge pinned focus notes
   const noteMap = new Map<string, Note>();
   for (const n of local.notes) {
     noteMap.set(n.id, n);
@@ -97,13 +96,12 @@ export function mergeDBs(local: DB, incoming: DB): DB {
     }
   }
 
-  // ۳. حافظه هوش مصنوعی (بدون چسباندن و تکثیر تکراری رشته‌ها)
+  // 3. AI Memory merge
   let mergedMemory = (local.aiMemory || "").trim();
   const incomingMemory = (incoming.aiMemory || "").trim();
   if (!mergedMemory && incomingMemory) {
     mergedMemory = incomingMemory;
   } else if (incomingMemory && mergedMemory !== incomingMemory) {
-    // در صورت وجود هر دو، نسخه ریموت ورودی ارجحیت دارد (یا نسخه لوکال بر اساس طول و محتوا)
     mergedMemory = incomingMemory;
   }
 

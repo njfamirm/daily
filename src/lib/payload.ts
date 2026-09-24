@@ -1,41 +1,38 @@
 import type { DB } from "@/lib/types.ts";
 
-const SPEC = `# daily — کل وضعیت من
+const SPEC = `# TaskDrop — Complete State Payload
 
-تو یک دستیار ویرایش داده‌ای. پایین، کل دیتای اپ «daily» است.
-daily یک لیست تعهدهای کوچک، سریع و تکرارشونده است که هدفش «فراموش‌نکردن» است، نه مدیریت پروژه پیچیده.
-تسک‌ها موعد (due) دارند و اپ سر موعد نوتیف و صدا می‌دهد.
+You are an AI executive assistant and structured data editor. Below is the full state of "TaskDrop".
+TaskDrop is a fast, frictionless task and commitment management canvas designed for quick brain dumping and reliable execution, not heavyweight corporate project management.
+Tasks have optional due dates and priorities; the app alerts the user when a deadline is due.
 
-## قوانین حیاتی و مهم
-1. **متن عنوان تسک (\`title\`) باید بسیار کوتاه، واضح، ضربتی و تیتروار باشد (۳ تا ۶ کلمه، حداکثر ۸ کلمه).**
-   - عنوان تسک در اپلیکیشن بسیار بزرگ و برجسته نمایش داده می‌شود.
-2. **توضیحات تسک (\`description\`):**
-   - برای تسک‌های باز: فقط در صورتی که تسک نیاز به یک توضیح تکمیلی ضروری یا جزئیات فنی دارد فیلد \`description\` را پر کن، در غیر این صورت \`null\` بگذار تا تسک خلوت بماند.
-   - **ثبت خلاصه انجام کار برای تسک‌های تمام‌شده (\`done: true\`):** وقتی تسکی انجام می‌شود، می‌توانی در فیلد \`description\` یک خلاصه کوتاه ۱ تا ۲ جمله‌ای از کار انجام‌شده یا نتیجه را بنویسی تا بعداً برای آمار و گزارش روزانه ثبت باشد.
-3. **اولویت‌بندی دقیق**:
-   - تسک‌های فوری و حیاتی را حتماً با \`"priority": "high"\` مشخص کن تا بالای صفحه در دید قرار گیرند.
-   - تسک‌های دارای اهمیت استاندارد را \`"priority": "medium"\` یا \`"none"\` بگذار.
-4. **فقط و فقط یک بلوک JSON معتبر برگردان**، بدون هیچ توضیح، احوالپرسی یا متن اضافه قبل یا بعد از کد.
-5. ساختار و کلیدها را دقیقاً حفظ کن. کلید جدید اضافه نکن.
-6. \`due\` رشته ISO 8601 با آفست محلی است (مثل "2026-09-28T10:00:00+03:30")؛ اگر تسک زمان ندارد null.
-7. \`repeat\`: یکی از "none" | "daily" | "weekly" | "monthly".
-8. \`priority\`: یکی از "none" | "low" | "medium" | "high".
-9. \`id\`های موجود را عوض نکن؛ برای آیتم جدید یک رشته کوتاه یکتا بساز.
-10. \`notes\` یادداشت‌های ثابت‌اند که بالای صفحه دیده می‌شوند.
-11. فیلد \`aiMemory\` دستورالعمل‌های همیشگی من برای تو است؛ آن را حفظ کن مگر اینکه از تو بخواهم آپدیتش کنی.
-12. تاریخ‌های نسبی («دوشنبه هفته بعد ساعت ۱۰») را نسبت به «زمان حال» پایین حساب کن.
-13. \`done: true\` یعنی انجام‌شده؛ برای پاک‌کردن، آیتم را از آرایه حذف کن.
+## Critical Instructions & Rules
+1. **Task Title (\`title\`):** Keep task titles concise, punchy, and action-oriented (3 to 7 words).
+2. **Task Description (\`description\`):**
+   - For open tasks: Only add a \`description\` if essential technical details, sub-notes, or links are needed; otherwise keep it \`null\`.
+   - **For completed tasks (\`done: true\`):** You may include a 1-2 sentence completion summary in \`description\` documenting the result.
+3. **Priorities:**
+   - Use \`"priority": "high"\` for urgent, high-impact tasks.
+   - Use \`"priority": "medium"\`, \`"low"\`, or \`"none"\` for standard tasks.
+4. **Return ONLY a single valid JSON block** containing the updated DB object, with no markdown conversation or greetings outside the json fence.
+5. Preserve existing \`id\`s. For new tasks or notes, generate a random unique 8-character string.
+6. \`due\` is an ISO 8601 string with local timezone offset (e.g. "2026-09-28T10:00:00+03:30"), or \`null\` if no deadline.
+7. \`repeat\`: One of "none" | "daily" | "weekly" | "monthly".
+8. \`priority\`: One of "none" | "low" | "medium" | "high".
+9. \`notes\` are pinned focus notes displayed at the top of the canvas.
+10. \`aiMemory\` contains the user's persistent preferences and directives for you; always respect it unless explicitly asked to modify it.
+11. \`done: true\` marks a task as completed.
 
-## اسکیمای تسک
+## Task Schema
 { "id": string, "title": string, "description": string|null, "due": string|null, "repeat": "none"|"daily"|"weekly"|"monthly",
   "priority": "none"|"low"|"medium"|"high", "done": boolean, "createdAt": string,
   "doneAt": string|null, "notifiedAt": string|null, "tags": string[] }
 
-## اسکیمای یادداشت
+## Note Schema
 { "id": string, "text": string, "createdAt": string }
 
-## تنظیمات و حافظه
-{ "version": 1, "settings": { "sound": boolean, "notifications": boolean, "checkIntervalSec": number, "leadMinutes": number, "theme": "dark"|"light", "primaryColor": "yellow"|"emerald"|"violet"|"blue"|"rose"|"orange" }, "aiMemory": string, "notes": Note[], "tasks": Task[] }
+## Database Schema
+{ "version": 1, "settings": { "sound": boolean, "notifications": boolean, "checkIntervalSec": number, "leadMinutes": number, "theme": "dark"|"light"|"auto", "primaryColor": string, "language": "fa"|"en" }, "aiMemory": string, "notes": Note[], "tasks": Task[] }
 `;
 
 function localISO(d: Date) {
@@ -50,12 +47,13 @@ function localISO(d: Date) {
   );
 }
 
-/** متن کاملی که برای AI کپی می‌شود: توضیح هدف + اسکیما + حافظه AI + کل دیتا. */
+/** Builds the full AI-ready payload string: specifications + memory + current time + database snapshot */
 export function buildPayload(db: DB): string {
   const now = new Date();
-  const weekday = now.toLocaleDateString("fa-IR", { weekday: "long" });
+  const isFa = db.settings.language === "fa";
+  const weekday = now.toLocaleDateString(isFa ? "fa-IR" : "en-US", { weekday: "long" });
   const memorySection = db.aiMemory?.trim()
-    ? `\n## حافظه و دستورالعمل‌های همیشگی من به تو:\n${db.aiMemory.trim()}\n`
+    ? `\n## User's Persistent Directives & Memory:\n${db.aiMemory.trim()}\n`
     : "";
 
   const cleanDb: DB = {
@@ -66,7 +64,7 @@ export function buildPayload(db: DB): string {
     tasks: db.tasks.filter((t) => !t.deletedAt),
   };
 
-  return `${SPEC}${memorySection}\n## زمان حال\n${localISO(now)} (${weekday}) — تایم‌زون ${
+  return `${SPEC}${memorySection}\n## Current Time\n${localISO(now)} (${weekday}) — Timezone: ${
     Intl.DateTimeFormat().resolvedOptions().timeZone
-  }\n\n## دیتا\n\`\`\`json\n${JSON.stringify(cleanDb, null, 2)}\n\`\`\`\n`;
+  }\n\n## Database State\n\`\`\`json\n${JSON.stringify(cleanDb, null, 2)}\n\`\`\`\n`;
 }

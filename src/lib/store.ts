@@ -69,7 +69,7 @@ function normalizeNote(raw: unknown): Note | null {
   };
 }
 
-/** هر ورودی‌ای (مثلاً خروجی ویرایش‌شده توسط AI) را به یک DB معتبر تبدیل می‌کند. */
+/** Normalizes any input payload (e.g. AI-modified json) into a valid TaskDrop DB object */
 export function normalizeDB(raw: unknown): DB {
   if (typeof raw !== "object" || raw === null) return structuredClone(DEFAULT_DB);
   const d = raw as Record<string, unknown>;
@@ -95,6 +95,7 @@ export function normalizeDB(raw: unknown): DB {
         s.primaryColor === "orange"
           ? s.primaryColor
           : "yellow",
+      language: s.language === "en" ? "en" : "fa",
     },
     aiMemory: str(d.aiMemory, "").trim(),
     notes: (Array.isArray(d.notes) ? d.notes : [])
@@ -120,13 +121,13 @@ export function saveDB(db: DB) {
   localStorage.setItem(KEY, JSON.stringify(db));
 }
 
-/** JSON را از متن آزاد بیرون می‌کشد (حتی اگر داخل ```json باشد). */
+/** Extracts valid JSON from unstructured text responses (even if enclosed in ```json fences) */
 export function parseIncoming(text: string): DB {
   const trimmed = text.trim();
   const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(trimmed);
   const body = fence ? fence[1] : trimmed;
   const start = body.indexOf("{");
   const end = body.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("JSON پیدا نشد");
+  if (start === -1 || end === -1) throw new Error("No valid JSON structure found in input");
   return normalizeDB(JSON.parse(body.slice(start, end + 1)));
 }

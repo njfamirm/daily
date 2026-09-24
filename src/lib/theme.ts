@@ -1,10 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
-import type { PrimaryColor, ThemeMode } from "@/lib/types.ts";
+import type { Language, PrimaryColor, ThemeMode } from "@/lib/types.ts";
 
 export interface ColorPreset {
   id: PrimaryColor;
-  label: string;
+  labelFa: string;
+  labelEn: string;
   bgHex: string;
   dotClass: string;
   ringClass: string;
@@ -14,7 +15,8 @@ export interface ColorPreset {
 export const COLOR_PRESETS: ColorPreset[] = [
   {
     id: "yellow",
-    label: "زرد قناری",
+    labelFa: "زرد قناری",
+    labelEn: "Canary Yellow",
     bgHex: "#eab308",
     dotClass: "bg-amber-400",
     ringClass: "ring-amber-400",
@@ -22,7 +24,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
   {
     id: "emerald",
-    label: "سبز زمردی",
+    labelFa: "سبز زمردی",
+    labelEn: "Emerald Green",
     bgHex: "#10b981",
     dotClass: "bg-emerald-400",
     ringClass: "ring-emerald-400",
@@ -30,7 +33,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
   {
     id: "violet",
-    label: "بنفش",
+    labelFa: "بنفش",
+    labelEn: "Royal Violet",
     bgHex: "#8b5cf6",
     dotClass: "bg-violet-400",
     ringClass: "ring-violet-400",
@@ -38,7 +42,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
   {
     id: "blue",
-    label: "آبی",
+    labelFa: "آبی",
+    labelEn: "Electric Blue",
     bgHex: "#3b82f6",
     dotClass: "bg-blue-400",
     ringClass: "ring-blue-400",
@@ -46,7 +51,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
   {
     id: "rose",
-    label: "رز",
+    labelFa: "رز",
+    labelEn: "Rose Pink",
     bgHex: "#f43f5e",
     dotClass: "bg-rose-400",
     ringClass: "ring-rose-400",
@@ -54,7 +60,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
   {
     id: "orange",
-    label: "نارنجی",
+    labelFa: "نارنجی",
+    labelEn: "Sunset Orange",
     bgHex: "#f97316",
     dotClass: "bg-orange-400",
     ringClass: "ring-orange-400",
@@ -62,6 +69,11 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
 ];
 
+export function getColorLabel(preset: ColorPreset, lang: Language = "fa"): string {
+  return lang === "fa" ? preset.labelFa : preset.labelEn;
+}
+
+/** Apply active theme mode (dark/light/auto) and primary accent color to DOM and status bar */
 export async function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor = "yellow") {
   const root = document.documentElement;
 
@@ -76,14 +88,14 @@ export async function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor 
   root.setAttribute("data-theme", resolved);
   root.setAttribute("data-color", color);
 
-  // هماهنگ‌سازی متای رنگ تم در مرورگر و PWA
+  // Synchronize browser and PWA meta theme-color
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   const bgColor = isDark ? "#09090b" : "#f8fafc";
   if (metaThemeColor) {
     metaThemeColor.setAttribute("content", bgColor);
   }
 
-  // هماهنگ‌سازی نوار وضعیت (Status Bar) بومی در موبایل (Android / iOS)
+  // Synchronize native mobile status bar on Android/iOS
   if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("StatusBar")) {
     try {
       await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });

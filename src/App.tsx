@@ -1,15 +1,15 @@
 import { Header } from "@/components/Header.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
-import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
-import { Kbd } from "@/components/ui/kbd.tsx";
+import { TaskItem } from "@/components/TaskItem.tsx";
 import { fireConfettiAt } from "@/lib/confetti.ts";
 import { hapticLight, hapticMedium, hapticSuccess, hapticWarning } from "@/lib/haptics.ts";
+import { getTranslation, updateDocumentDirection } from "@/lib/i18n.ts";
 import { UpdateDialog } from "@/components/UpdateDialog.tsx";
 import { initNotificationChannel, syncAllTaskNotifications } from "@/lib/notifications.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
-import type { DB, Task } from "@/lib/types.ts";
+import type { DB, Language, SnoozePreset, Task } from "@/lib/types.ts";
 import { useAutoCloudSync } from "@/lib/useCloudSync.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
@@ -26,15 +26,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SortMode = "priority" | "due" | "created";
 
-const SORT_OPTIONS: { id: SortMode; label: string; icon: typeof Flame; iconColor: string }[] = [
-  { id: "priority", label: "اولویت", icon: Flame, iconColor: "text-red-400" },
-  { id: "due", label: "موعد", icon: Clock, iconColor: "text-emerald-400" },
-  { id: "created", label: "جدیدترین", icon: Sparkles, iconColor: "text-sky-400" },
-];
-
 function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string {
   const d = new Date(iso);
-  // جلو می‌بریم تا اولین موعدِ آینده
   let guard = 0;
   while (d.getTime() <= from.getTime() && guard++ < 500) {
     if (repeat === "daily") d.setDate(d.getDate() + 1);
@@ -65,8 +58,15 @@ function computeSnoozeTime(preset: SnoozePreset): string {
 
 export function App() {
   const { db, setDb, update } = useDB();
+  const lang: Language = db.settings.language || "fa";
+  const t = getTranslation(lang);
 
-  // همگام‌سازی خودکار و زنده در پس‌زمینه بین تمام دستگاه‌ها
+  // Sync document direction and language attribute with active setting
+  useEffect(() => {
+    updateDocumentDirection(lang);
+  }, [lang]);
+
+  // Automatic real-time background cloud synchronization
   useAutoCloudSync({
     db,
     onApplyRemote: setDb,
@@ -99,33 +99,33 @@ export function App() {
     setTimeout(() => setToast(null), undo ? 8000 : 3000);
   };
 
-  // راه‌اندازی کانال نوتیفیکیشن بومی با اولویت بالا و صدای زنگ در صفحه قفل
+  // Initialize native notification channel with high priority
   useEffect(() => {
     void initNotificationChannel();
   }, []);
 
-  // همگام‌سازی نوتیفیکیشن‌های بومی دستگاه با تسک‌ها
+  // Sync native device scheduled alarms with active tasks
   useEffect(() => {
     void syncAllTaskNotifications(db.tasks);
   }, [db.tasks]);
 
-  // موتور یادآوری
+  // Periodic reminder checking engine
   useEffect(() => {
     const tick = () => {
       setNow(Date.now());
-      const t = Date.now();
+      const currentTime = Date.now();
       const lead = db.settings.leadMinutes * 60_000;
       const ring: Task[] = db.tasks.filter(
         (x) =>
           !x.done &&
           !x.deletedAt &&
           x.due !== null &&
-          new Date(x.due).getTime() - lead <= t &&
+          new Date(x.due).getTime() - lead <= currentTime &&
           (x.notifiedAt === null || new Date(x.notifiedAt).getTime() < new Date(x.due).getTime()),
       );
       if (ring.length > 0) {
         if (db.settings.notifications) {
-          for (const x of ring) notify("یادت نره", x.title);
+          for (const x of ring) notify(t.appName, x.title);
         }
         if (db.settings.sound) beep(ring.length > 1 ? 3 : 2);
         const ids = new Set(ring.map((x) => x.id));
@@ -141,7 +141,7 @@ export function App() {
     tick();
     const id = setInterval(tick, db.settings.checkIntervalSec * 1000);
     return () => clearInterval(id);
-  }, [db, update]);
+  }, [db, update, t.appName]);
 
   const due = useMemo(
     () =>
@@ -155,7 +155,7 @@ export function App() {
     setBadge(due);
   }, [due]);
 
-  // درخواست مجوز نوتیف در اولین تعامل کاربر
+  // Request notification permission on first user gesture
   useEffect(() => {
     const ask = () => {
       if (firedRef.current) return;
@@ -170,7 +170,7 @@ export function App() {
     };
   }, [db.settings.notifications]);
 
-  // کلیدهای میانبر سراسری کیبورد
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || "").toLowerCase();
@@ -179,7 +179,7 @@ export function App() {
         activeTag === "textarea" ||
         (document.activeElement as HTMLElement)?.isContentEditable;
 
-      // Undo: Ctrl+Z یا Cmd+Z
+      // Undo: Ctrl+Z or Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !isInputActive) {
         if (toast?.undo) {
           e.preventDefault();
@@ -189,10 +189,9 @@ export function App() {
         return;
       }
 
-      // هنگام تایپ داخل input یا textarea کلیدهای ناوبری فعال نشوند
       if (isInputActive) return;
 
-      // فوکوس ثبت سریع: '/' یا 'n' یا 'N'
+      // Quick add focus: '/' or 'n' or 'N'
       if (e.key === "/" || e.key === "n" || e.key === "N") {
         e.preventDefault();
         setShowInput(true);
@@ -245,7 +244,7 @@ export function App() {
         ...prev,
         tasks: prev.tasks.map((t) => {
           if (t.id !== id) return t;
-          // تسک تکرارشونده به‌جای بسته‌شدن، به موعد بعدی می‌رود
+          // Recurring task advances to the next period instead of closing
           if (!t.done && t.repeat !== "none" && t.due) {
             return {
               ...t,
@@ -274,7 +273,7 @@ export function App() {
         t.id === id ? { ...t, deletedAt: nowIso, updatedAt: nowIso } : t,
       ),
     }));
-    showToast("حذف شد", () => setDb(before));
+    showToast(t.deleted, () => setDb(before));
   };
 
   const snooze = (id: string, preset: SnoozePreset) => {
@@ -290,13 +289,15 @@ export function App() {
           : t,
       ),
     }));
-    const presetLabels: Record<SnoozePreset, string> = {
-      "15m": "۱۵ دقیقه بعد",
-      "1h": "۱ ساعت بعد",
-      tomorrow: "فردا ۸:۳۰ صبح",
-      weekend: "شنبه ۹:۰۰ صبح",
-    };
-    showToast(`موعد به تعویق افتاد: ${presetLabels[preset]}`, () => setDb(before));
+    const label =
+      preset === "15m"
+        ? t.snooze15m
+        : preset === "1h"
+          ? t.snooze1h
+          : preset === "tomorrow"
+            ? t.snoozeTomorrow
+            : t.snoozeWeekend;
+    showToast(t.snoozedToast(label), () => setDb(before));
   };
 
   const rename = (id: string, title: string, description?: string | null) => {
@@ -326,7 +327,7 @@ export function App() {
         t.done && !t.deletedAt ? { ...t, deletedAt: nowIso, updatedAt: nowIso } : t,
       ),
     }));
-    showToast("تسک‌های انجام‌شده پاک شدند", () => setDb(before));
+    showToast(t.clearDoneSuccess, () => setDb(before));
   };
 
   const [sortBy, setSortBy] = useState<SortMode>(() => {
@@ -345,6 +346,15 @@ export function App() {
     } catch {}
   };
 
+  const sortOptions = useMemo(
+    () => [
+      { id: "priority" as const, label: t.sortPriority, icon: Flame, iconColor: "text-red-400" },
+      { id: "due" as const, label: t.sortDue, icon: Clock, iconColor: "text-emerald-400" },
+      { id: "created" as const, label: t.sortCreated, icon: Sparkles, iconColor: "text-sky-400" },
+    ],
+    [t.sortPriority, t.sortDue, t.sortCreated],
+  );
+
   const allTags = useMemo(() => {
     const set = new Set<string>();
     for (const t of db.tasks) {
@@ -362,22 +372,18 @@ export function App() {
 
     if (sortBy === "priority") {
       const sortTasks = (a: Task, b: Task) => {
-        // 1. اولویت: high (0) > medium (1) > none (2) > low (3)
         const pWeight = { high: 0, medium: 1, none: 2, low: 3 };
         const aP = pWeight[a.priority || "none"];
         const bP = pWeight[b.priority || "none"];
         if (aP !== bP) return aP - bP;
 
-        // 2. وضعیت سررسید: تسک سررسیدشده بالاتر می‌آید
         const aOverdue = a.due && ts(a) <= now ? 0 : 1;
         const bOverdue = b.due && ts(b) <= now ? 0 : 1;
         if (aOverdue !== bOverdue) return aOverdue - bOverdue;
 
-        // 3. تاریخ نزدیک‌تر
         const timeDiff = ts(a) - ts(b);
         if (timeDiff !== 0) return timeDiff;
 
-        // 4. جدیدترها
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       };
 
@@ -420,7 +426,6 @@ export function App() {
       };
     }
 
-    // sortBy === "created"
     const createdTasks = [...open].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
@@ -443,6 +448,7 @@ export function App() {
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:py-10">
       <Header
         db={db}
+        lang={lang}
         dueCount={due}
         showInput={showInput}
         onToggleInput={toggleInput}
@@ -453,10 +459,11 @@ export function App() {
         onMessage={showToast}
       />
 
-      {showInput && <QuickAdd onAdd={addTask} existingTags={allTags} />}
+      {showInput && <QuickAdd onAdd={addTask} existingTags={allTags} lang={lang} />}
 
       <Notes
         notes={db.notes.filter((n) => !n.deletedAt)}
+        lang={lang}
         onAdd={(text) => {
           const nowIso = new Date().toISOString();
           update((prev) => ({
@@ -481,9 +488,9 @@ export function App() {
       <main className="flex-1 space-y-6">
         {activeTasksCount > 0 && (
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-medium text-zinc-400">{openCount} تسک باز</span>
+            <span className="text-xs font-medium text-zinc-400">{t.openTasksCount(openCount)}</span>
             <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 text-xs shadow-xs">
-              {SORT_OPTIONS.map((opt) => {
+              {sortOptions.map((opt) => {
                 const active = sortBy === opt.id;
                 const Icon = opt.icon;
                 return (
@@ -492,7 +499,7 @@ export function App() {
                     type="button"
                     onClick={() => handleSetSortBy(opt.id)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
+                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
                       active
                         ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40",
@@ -510,17 +517,19 @@ export function App() {
         {groups.mode === "priority" && (
           <>
             <Group
-              title="فوری و بااهمیت"
+              title={t.groupUrgent}
               icon={<Flame className="size-4 text-red-500 fill-red-500/20" />}
               tasks={groups.highPriority}
               alert
+              lang={lang}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
             <Group
-              title="کارهای جاری"
+              title={t.groupRegular}
               icon={<CheckSquare className="size-4 text-zinc-400" />}
               tasks={groups.regularTasks}
+              lang={lang}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
@@ -530,24 +539,27 @@ export function App() {
         {groups.mode === "due" && (
           <>
             <Group
-              title="سررسیدشده"
+              title={t.groupOverdue}
               icon={<AlertCircle className="size-4 text-red-500" />}
               tasks={groups.overdue}
               alert
+              lang={lang}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
             <Group
-              title="دارای موعد"
+              title={t.groupUpcoming}
               icon={<Calendar className="size-4 text-emerald-400" />}
               tasks={groups.upcoming}
+              lang={lang}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
             <Group
-              title="بدون موعد"
+              title={t.groupNoDue}
               icon={<Clock className="size-4 text-zinc-400" />}
               tasks={groups.noDue}
+              lang={lang}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
@@ -556,26 +568,25 @@ export function App() {
 
         {groups.mode === "created" && (
           <Group
-            title="کارهای باز (جدیدترین)"
+            title={t.groupCreated}
             icon={<Sparkles className="size-4 text-sky-400" />}
             tasks={groups.createdTasks}
+            lang={lang}
             onSnooze={snooze}
             {...{ toggle, remove, rename }}
           />
         )}
 
         <Group
-          title="انجام‌شده"
+          title={t.groupDone}
           icon={<CheckCircle2 className="size-4 text-emerald-400" />}
           tasks={groups.done}
+          lang={lang}
           {...{ toggle, remove, rename }}
         />
 
         {activeTasksCount === 0 && (
-          <p className="pt-10 text-center text-sm text-zinc-500">
-            لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300 font-medium">پیست</strong>{" "}
-            از AI دیتای جدید وارد کنید یا با کلید <Kbd size="xs">/</Kbd> تسک بنویسید.
-          </p>
+          <p className="pt-10 text-center text-sm text-zinc-500">{t.emptyTasksMsg}</p>
         )}
       </main>
 
@@ -585,20 +596,20 @@ export function App() {
           {toast.undo && (
             <button
               type="button"
-              className="font-semibold text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              className="font-semibold text-amber-400 underline underline-offset-2 hover:text-amber-300 cursor-pointer"
               onClick={() => {
                 toast.undo?.();
                 setToast(null);
               }}
             >
-              برگردان
+              {t.undo}
             </button>
           )}
         </div>
       )}
 
-      {/* دیالوگ به‌روزرسانی خودکار درون‌برنامه‌ای */}
-      <UpdateDialog />
+      {/* In-app native auto updater dialog */}
+      <UpdateDialog lang={lang} />
     </div>
   );
 }
@@ -608,6 +619,7 @@ function Group({
   icon,
   tasks,
   alert,
+  lang,
   toggle,
   remove,
   rename,
@@ -617,6 +629,7 @@ function Group({
   icon?: React.ReactNode;
   tasks: Task[];
   alert?: boolean;
+  lang: Language;
   toggle: (id: string, event?: React.MouseEvent) => void;
   remove: (id: string) => void;
   rename: (id: string, title: string, description?: string | null) => void;
@@ -649,6 +662,7 @@ function Group({
           <TaskItem
             key={t.id}
             task={t}
+            lang={lang}
             onToggle={toggle}
             onDelete={remove}
             onRename={rename}

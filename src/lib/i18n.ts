@@ -1,0 +1,430 @@
+import type { Language } from "@/lib/types.ts";
+
+export type TranslationKey = keyof typeof translations.fa;
+
+export const translations = {
+  fa: {
+    // Header & Actions
+    appName: "TaskDrop",
+    dueBadge: (n: number) => `${n} سررسید`,
+    copy: "کپی",
+    copied: "کپی شد",
+    copyTitle: "کپی برای هوش مصنوعی",
+    copySuccess: "کپی شد! پرامپت و دیتای تسک‌ها در کلیپ‌بورد قرار گرفت",
+    paste: "پیست",
+    pasteTitle: "جایگزینی سریع دیتای ویرایش شده با خروجی هوش مصنوعی",
+    pasteSuccess: "دیتا با موفقیت از AI جایگزین شد",
+    pasteFailed: (err: string) => `پیست نشد: ${err}`,
+    clipboardEmpty: "کلیپ‌بورد خالی است",
+    toggleInputShow: "نمایش باکس ورودی دستی",
+    toggleInputHide: "مخفی‌کردن باکس ورودی",
+    moreOptions: "امکانات و تنظیمات بیشتر",
+
+    // Theme & Appearance
+    themeMode: "حالت تم",
+    themeDark: "تاریک",
+    themeLight: "روشن",
+    themeAuto: "خودکار",
+    themeDarkActive: "تم تاریک فعال شد",
+    themeLightActive: "تم روشن فعال شد",
+    themeAutoActive: "تم خودکار سیستم فعال شد",
+    accentColor: "رنگ تم اصلی",
+    colorSelected: (label: string) => `رنگ ${label} انتخاب شد`,
+
+    // Language
+    language: "زبان برنامه",
+    langFa: "فارسی",
+    langEn: "English",
+    langChanged: (lang: string) => `زبان به ${lang} تغییر کرد`,
+
+    // Navigation & Modals
+    aiMemory: "حافظه هوش مصنوعی",
+    aiMemoryUpdated: "حافظه هوش مصنوعی به‌روزرسانی شد",
+    dailyDigest: "گزارش روزانه",
+    weeklyStreak: "آمار و پیوستگی ۷ روزه",
+    cloudSync: "همگام‌سازی ابری (E2EE)",
+    notifications: "نوتیفیکیشن مرورگر",
+    notifOn: "روشن",
+    notifOff: "خاموش",
+    notifEnabled: "نوتیفیکیشن فعال شد",
+    notifDisabled: "نوتیفیکیشن غیرفعال شد",
+    alarmSound: "صدای زنگ هشدار",
+    soundEnabled: "صدای زنگ فعال شد",
+    soundDisabled: "صدای زنگ خاموش شد",
+    helpAndShortcuts: "راهنما و کلیدهای میانبر",
+    downloadAndroid: "دانلود نسخه اندروید (APK)",
+    badgeNew: "جدید",
+    clearDone: "پاک‌سازی انجام‌شده‌ها",
+    clearDoneSuccess: "تسک‌های انجام‌شده پاک شدند",
+
+    // Quick Add & Input
+    quickAddPlaceholder: "چی یادت نره؟ مثلاً: فردا ساعت ۱۰ جلسه فنی !فوری #کار",
+    smartSuggestions: "پیشنهادهای هوشمند",
+    suggestionHint: "با Tab یا ↵ تکمیل کنید",
+    categoryTag: "برچسب",
+    categoryTagNew: "برچسب جدید",
+    categoryPriorityHigh: "اولویت بالا",
+    categoryPriorityMedium: "اولویت متوسط",
+    categoryPriorityLow: "اولویت پایین",
+    categoryDesc: "یادداشت ثانویه تسک",
+
+    // Task Item & Groups
+    openTasksCount: (n: number) => `${n} تسک باز`,
+    sortPriority: "اولویت",
+    sortDue: "موعد",
+    sortCreated: "جدیدترین",
+    groupUrgent: "فوری و بااهمیت",
+    groupRegular: "کارهای جاری",
+    groupOverdue: "سررسیدشده",
+    groupUpcoming: "دارای موعد",
+    groupNoDue: "بدون موعد",
+    groupCreated: "کارهای باز (جدیدترین)",
+    groupDone: "انجام‌شده",
+    emptyTasksMsg:
+      "لیست تسک‌ها خالی است. با دکمه پیست از AI دیتای جدید وارد کنید یا با کلید / تسک بنویسید.",
+    undo: "برگردان",
+    deleted: "حذف شد",
+    taskDoneAria: "انجام شد",
+    taskUndoAria: "برگردان",
+    taskTitlePlaceholder: "عنوان تسک…",
+    priorityHigh: "فوری",
+    priorityMedium: "متوسط",
+    priorityLow: "کم",
+    snoozeTitle: "تعویق موعد",
+    snoozeTo: "تعویق موعد به:",
+    snooze15m: "۱۵ دقیقه بعد",
+    snooze1h: "۱ ساعت بعد",
+    snoozeTomorrow: "فردا ۸:۳۰ صبح",
+    snoozeWeekend: "شنبه بعد ۹:۰۰ صبح",
+    snoozedToast: (preset: string) => `موعد به تعویق افتاد: ${preset}`,
+    deleteAria: "حذف",
+
+    // Notes
+    keepInSight: "جلوی چشم",
+    addNote: "افزودن نکته (M)",
+    notePlaceholder: "نکته…",
+    deleteNoteAria: "حذف نکته",
+
+    // Fallback Paste Modal
+    pasteFallbackTitle: "پیست خروجی هوش مصنوعی",
+    pasteFallbackPlaceholder: "خروجی هوش مصنوعی را اینجا پیست کنید…",
+    cancel: "انصراف",
+    apply: "اعمال کن",
+    close: "بستن",
+    save: "ذخیره",
+
+    // AI Memory Sheet
+    aiMemoryTitle: "حافظه هوش مصنوعی",
+    aiMemoryDesc:
+      "هر دستورالعمل یا ترجیحی اینجا بنویسید، موقع ارسال دیتا به AI همراه پرامپت ارسال می‌شود تا هوش مصنوعی طبق سلیقه و سبک کاری شما تسک‌ها را ویرایش و سازماندهی کند.",
+    aiMemoryPlaceholder:
+      "مثال: من برنامه‌نویس هستم، تسک‌های کدنویسی اولویت بالا باشند، برای خریدهای خانه برچسب #خرید بزن و زمان پیش‌فرض را روی ساعت ۶ عصر بگذار...",
+    aiMemoryQuickPrompts: "پیشنهادات سریع برای حافظه:",
+    aiMemoryActive: "حافظه فعال است و با AI ردوبدل می‌شود",
+    aiMemoryEmpty: "حافظه خالی است",
+    aiMemorySave: "ذخیره حافظه",
+
+    // Daily Digest
+    digestTitle: "گزارش روزانه",
+    digestDesc:
+      "خلاصه کارهای انجام‌شده و برنامه‌های آینده برای مرور شخصی یا ارسال در شبکه‌های اجتماعی و اسلک:",
+    digestCopy: "کپی متن گزارش",
+    digestCopied: "کپی شد",
+    digestCopySuccess: "گزارش روزانه در کلیپ‌بورد کپی شد",
+    digestCopyFail: "کپی نشد",
+    digestStandardMd: "فرمت استاندارد مارک‌داون",
+    digestHeader: "📅 **گزارش روزانه**",
+    digestCompletedSection: (n: number) => `✅ **کارهای انجام‌شده امروز (${n} مورد):**`,
+    digestNoCompleted: "- هنوز تسکی امروز نهایی نشده است.",
+    digestRemainingSection: (n: number) => `⏳ **باقی‌مانده‌های امروز (${n} مورد):**`,
+    digestTomorrowSection: (n: number) => `🎯 **برنامه‌های فردا (${n} مورد):**`,
+    digestNotesSection: "📌 **یادداشت‌های جلوی چشم:**",
+    digestFooter: "---\n_تولید شده توسط TaskDrop_",
+
+    // Streak Modal & Weekly Stats
+    streakTitle: "آمار و پیوستگی هفتگی",
+    streakDays: (n: number) => `${n} روز پیوستگی`,
+    todayStats: (done: number, total: number, pct: number) =>
+      `امروز: ${done} از ${total} کار (${pct}٪)`,
+    dayTasksTooltip: (label: string, count: number) => `${label}: ${count} تسک انجام شده`,
+
+    // Sync Modal
+    syncTitle: "همگام‌سازی ابری TaskDrop (E2EE)",
+    syncSubtitle: "سینک ایمن دوطرفه با رمزنگاری سرتاسری ۲۵۶ بیتی روی دستگاه شما",
+    syncQuickPair: "اتصال سریع بین دستگاه‌ها",
+    syncShowQr: "نمایش بارکد اتصال سریع",
+    syncHideQr: "بستن بارکد",
+    syncQrDesc:
+      "این بارکد را با دوربین گوشی یا دستگاه دوم اسکن کنید تا تمام اطلاعات و رمز خودکار وارد شود.",
+    syncCopyToken: "کپی رشته اتصال برای پیست در دستگاه دیگر",
+    syncTokenCopied: "کلید جفت‌سازی کپی شد",
+    syncTokenPlaceholder: "پیست کلید اتصال دریافت شده از دستگاه دیگر…",
+    syncPairNow: "جفت‌سازی فوری",
+    syncServerUrl: "آدرس سرور رله (Server URL):",
+    syncServerTest: "تست سرور",
+    syncServerTesting: "در حال بررسی سلامت سرور…",
+    syncServerOk: "ارتباط با سرور برقرار و معتبر است",
+    syncServerEnterUrl: "لطفاً آدرس سرور را وارد کنید",
+    syncServerUnauthorized: "توکن امنیتی سرور نامعتبر است (401)",
+    syncServerFail: (status: number) => `پاسخ ناموفق از سرور (${status})`,
+    syncServerUnreachable: (err: string) => `عدم دسترسی به سرور: ${err}`,
+    syncAuthToken: "توکن امنیتی سرور (Server Auth Token):",
+    syncAuthTokenPlaceholder: "در صورت فعال بودن AUTH_TOKEN روی ورکر",
+    syncVaultId: "کد والت (Sync Vault ID):",
+    syncGenerateVault: "تولید کد جدید",
+    syncVaultGenerated: (id: string) => `کد والت جدید ساخته شد: ${id}`,
+    syncSecretKey: "رمز اختصاصی رمزنگاری (End-to-End Encryption Key):",
+    syncSecretKeyPlaceholder: "کلمه عبور امن برای رمزنگاری دیتای شما",
+    syncSecretKeyHint:
+      "دیتا با استاندارد AES-GCM روی مرورگر شما رمز می‌شود؛ حتی سرور هم به محتوای خام دسترسی ندارد.",
+    syncNow: "همگام‌سازی فوری (Sync Now)",
+    syncing: "در حال همگام‌سازی و ادغام…",
+    syncLastSuccess: "آخرین همگام‌سازی موفق:",
+    syncConflictFreeNotice: "ادغام خودکار و بدون تداخل (Conflict-Free)",
+    syncMissingFields: "لطفاً آدرس سرور، کد والت و رمز اختصاصی را کامل کنید",
+    syncSuccess: "همگام‌سازی سرور با موفقیت انجام شد",
+    syncError: (err: string) => `خطا در همگام‌سازی: ${err}`,
+    syncPairSuccess: "تنظیمات اتصال از بارکد/توکن بازخوانی شد؛ در حال همگام‌سازی…",
+    syncPairInvalid: "کد اتصال نامعتبر است",
+
+    // Help Sheet
+    helpTitle: "راهنما و کلیدهای میانبر",
+    helpIntro:
+      "هر چه در خط ورودی بنویسید، اپ ابتدا این الگوها را از متن تشخیص داده و استخراج می‌کند و بقیه متن عنوان تسک خواهد شد.",
+    helpShortcutsTitle: "کلیدهای میانبر",
+    helpPriorityTitle: "اولویت‌بندی",
+    helpDateTitle: "تاریخ",
+    helpTimeTitle: "ساعت",
+    helpRepeatTitle: "تکرار",
+    helpTagsTitle: "برچسب‌ها و بقیه موارد",
+    helpExampleTitle: "مثال ترکیبی",
+    helpExampleText: "هر روز ساعت ۸ ورزش #سلامتی",
+    helpExampleExplanation: "عنوان: «ورزش»، موعد: فردا ۸:۰۰، تکرار: هر روز، تگ: سلامتی",
+    helpOr: "یا",
+
+    // Update Dialog
+    updateAvailableTitle: "نسخه جدید در دسترس است!",
+    updateVersions: (current: string, next: string) => `نسخه فعلی: ${current} ➔ نسخه جدید: ${next}`,
+    updateDownloading: "در حال دانلود بسته نصب...",
+    updateInstallButton: "دانلود و نصب خودکار",
+    updateLater: "بعداً",
+    updateDownloadError: "خطا در دریافت فایل به‌روزرسانی",
+  },
+  en: {
+    // Header & Actions
+    appName: "TaskDrop",
+    dueBadge: (n: number) => `${n} due`,
+    copy: "Copy",
+    copied: "Copied",
+    copyTitle: "Copy payload for AI",
+    copySuccess: "Copied! Task payload and AI prompt are in clipboard",
+    paste: "Paste",
+    pasteTitle: "Replace task database with AI output",
+    pasteSuccess: "Database updated from AI payload",
+    pasteFailed: (err: string) => `Paste failed: ${err}`,
+    clipboardEmpty: "Clipboard is empty",
+    toggleInputShow: "Show quick add input",
+    toggleInputHide: "Hide quick add input",
+    moreOptions: "Options & Settings",
+
+    // Theme & Appearance
+    themeMode: "Theme",
+    themeDark: "Dark",
+    themeLight: "Light",
+    themeAuto: "Auto",
+    themeDarkActive: "Dark theme enabled",
+    themeLightActive: "Light theme enabled",
+    themeAutoActive: "System theme enabled",
+    accentColor: "Accent Color",
+    colorSelected: (label: string) => `${label} color selected`,
+
+    // Language
+    language: "Language",
+    langFa: "فارسی",
+    langEn: "English",
+    langChanged: (lang: string) => `Language changed to ${lang}`,
+
+    // Navigation & Modals
+    aiMemory: "AI Memory",
+    aiMemoryUpdated: "AI memory updated",
+    dailyDigest: "Daily Digest",
+    weeklyStreak: "7-Day Stats & Streak",
+    cloudSync: "Cloud Sync (E2EE)",
+    notifications: "Browser Notifications",
+    notifOn: "On",
+    notifOff: "Off",
+    notifEnabled: "Notifications enabled",
+    notifDisabled: "Notifications disabled",
+    alarmSound: "Alarm Sound",
+    soundEnabled: "Alarm sound enabled",
+    soundDisabled: "Alarm sound muted",
+    helpAndShortcuts: "Help & Shortcuts",
+    downloadAndroid: "Download Android App (APK)",
+    badgeNew: "NEW",
+    clearDone: "Clear Completed Tasks",
+    clearDoneSuccess: "Completed tasks cleared",
+
+    // Quick Add & Input
+    quickAddPlaceholder: "What's on your mind? e.g. Tomorrow 10am tech sync !urgent #work",
+    smartSuggestions: "Smart Suggestions",
+    suggestionHint: "Complete with Tab or ↵",
+    categoryTag: "Tag",
+    categoryTagNew: "New Tag",
+    categoryPriorityHigh: "High Priority",
+    categoryPriorityMedium: "Medium Priority",
+    categoryPriorityLow: "Low Priority",
+    categoryDesc: "Secondary Note",
+
+    // Task Item & Groups
+    openTasksCount: (n: number) => `${n} open tasks`,
+    sortPriority: "Priority",
+    sortDue: "Due Date",
+    sortCreated: "Newest",
+    groupUrgent: "Urgent & Important",
+    groupRegular: "Active Tasks",
+    groupOverdue: "Overdue",
+    groupUpcoming: "Upcoming",
+    groupNoDue: "No Due Date",
+    groupCreated: "Open Tasks (Newest)",
+    groupDone: "Completed",
+    emptyTasksMsg: "Task list is empty. Click Paste to import from AI or press / to quick add.",
+    undo: "Undo",
+    deleted: "Deleted",
+    taskDoneAria: "Mark as done",
+    taskUndoAria: "Reopen task",
+    taskTitlePlaceholder: "Task title…",
+    priorityHigh: "Urgent",
+    priorityMedium: "Medium",
+    priorityLow: "Low",
+    snoozeTitle: "Snooze task",
+    snoozeTo: "Snooze until:",
+    snooze15m: "In 15 minutes",
+    snooze1h: "In 1 hour",
+    snoozeTomorrow: "Tomorrow 8:30 AM",
+    snoozeWeekend: "Next Weekend 9:00 AM",
+    snoozedToast: (preset: string) => `Snoozed until: ${preset}`,
+    deleteAria: "Delete",
+
+    // Notes
+    keepInSight: "Keep in Sight",
+    addNote: "Add note (M)",
+    notePlaceholder: "Note…",
+    deleteNoteAria: "Delete note",
+
+    // Fallback Paste Modal
+    pasteFallbackTitle: "Paste AI Output",
+    pasteFallbackPlaceholder: "Paste the AI response here…",
+    cancel: "Cancel",
+    apply: "Apply",
+    close: "Close",
+    save: "Save",
+
+    // AI Memory Sheet
+    aiMemoryTitle: "AI Memory & Directives",
+    aiMemoryDesc:
+      "Any instructions or preferences saved here will accompany every payload sent to AI, ensuring your assistant schedules, prioritizes, and organizes tasks according to your personal work style.",
+    aiMemoryPlaceholder:
+      "Example: I am a software engineer. Prioritize coding tasks as high priority. Tag home errands with #shopping and set default times to 6:00 PM...",
+    aiMemoryQuickPrompts: "Quick suggestions for AI memory:",
+    aiMemoryActive: "Memory is active and included with AI payloads",
+    aiMemoryEmpty: "Memory is empty",
+    aiMemorySave: "Save Memory",
+
+    // Daily Digest
+    digestTitle: "Daily Digest",
+    digestDesc:
+      "Summary of completed milestones and upcoming agenda for personal review, standup notes, or Slack updates:",
+    digestCopy: "Copy Digest Markdown",
+    digestCopied: "Copied",
+    digestCopySuccess: "Daily digest copied to clipboard",
+    digestCopyFail: "Failed to copy",
+    digestStandardMd: "Standard Markdown Format",
+    digestHeader: "📅 **Daily Digest**",
+    digestCompletedSection: (n: number) => `✅ **Completed Today (${n} items):**`,
+    digestNoCompleted: "- No tasks completed yet today.",
+    digestRemainingSection: (n: number) => `⏳ **Remaining Today (${n} items):**`,
+    digestTomorrowSection: (n: number) => `🎯 **Agenda for Tomorrow (${n} items):**`,
+    digestNotesSection: "📌 **Pinned Focus Notes:**",
+    digestFooter: "---\n_Generated by TaskDrop_",
+
+    // Streak Modal & Weekly Stats
+    streakTitle: "Weekly Streak & Stats",
+    streakDays: (n: number) => `${n} Day Streak`,
+    todayStats: (done: number, total: number, pct: number) =>
+      `Today: ${done} of ${total} tasks (${pct}%)`,
+    dayTasksTooltip: (label: string, count: number) => `${label}: ${count} tasks completed`,
+
+    // Sync Modal
+    syncTitle: "TaskDrop Cloud Sync (E2EE)",
+    syncSubtitle: "Zero-knowledge two-way sync with 256-bit AES-GCM encryption on your device",
+    syncQuickPair: "Quick Device Pairing",
+    syncShowQr: "Show Pairing QR Code",
+    syncHideQr: "Hide QR Code",
+    syncQrDesc:
+      "Scan this QR code with another device to automatically configure the sync relay and encryption key.",
+    syncCopyToken: "Copy pairing token string",
+    syncTokenCopied: "Pairing token copied",
+    syncTokenPlaceholder: "Paste pairing token from another device…",
+    syncPairNow: "Pair Instantly",
+    syncServerUrl: "Relay Server URL:",
+    syncServerTest: "Test Server",
+    syncServerTesting: "Testing server health…",
+    syncServerOk: "Server connection verified and active",
+    syncServerEnterUrl: "Please enter server URL",
+    syncServerUnauthorized: "Server auth token invalid (401)",
+    syncServerFail: (status: number) => `Server responded with error (${status})`,
+    syncServerUnreachable: (err: string) => `Server unreachable: ${err}`,
+    syncAuthToken: "Server Auth Token (Optional):",
+    syncAuthTokenPlaceholder: "Required if AUTH_TOKEN is enabled on the worker",
+    syncVaultId: "Sync Vault ID:",
+    syncGenerateVault: "Generate Code",
+    syncVaultGenerated: (id: string) => `New Vault ID generated: ${id}`,
+    syncSecretKey: "End-to-End Encryption Key:",
+    syncSecretKeyPlaceholder: "Secure passphrase to encrypt your vault",
+    syncSecretKeyHint:
+      "Data is encrypted with AES-GCM on your device before transfer; the server never sees plain text.",
+    syncNow: "Sync Now",
+    syncing: "Syncing and merging…",
+    syncLastSuccess: "Last successful sync:",
+    syncConflictFreeNotice: "Conflict-Free automatic merge engine",
+    syncMissingFields: "Please complete Server URL, Vault ID, and Encryption Key",
+    syncSuccess: "Cloud sync completed successfully",
+    syncError: (err: string) => `Sync error: ${err}`,
+    syncPairSuccess: "Connection configured from token; syncing…",
+    syncPairInvalid: "Invalid pairing code",
+
+    // Help Sheet
+    helpTitle: "Help & Keyboard Shortcuts",
+    helpIntro:
+      "Type naturally into the input line. TaskDrop extracts dates, priorities, tags, and reminders automatically, using the remaining text as the task title.",
+    helpShortcutsTitle: "Keyboard Shortcuts",
+    helpPriorityTitle: "Prioritization",
+    helpDateTitle: "Dates",
+    helpTimeTitle: "Times",
+    helpRepeatTitle: "Recurring",
+    helpTagsTitle: "Tags & Notes",
+    helpExampleTitle: "Combined Example",
+    helpExampleText: "Every day at 8am morning workout #fitness",
+    helpExampleExplanation: "Title: 'workout', Due: Tomorrow 8:00 AM, Repeat: daily, Tag: fitness",
+    helpOr: "or",
+
+    // Update Dialog
+    updateAvailableTitle: "New Version Available!",
+    updateVersions: (current: string, next: string) => `Current: ${current} ➔ New: ${next}`,
+    updateDownloading: "Downloading update package...",
+    updateInstallButton: "Download & Auto Install",
+    updateLater: "Later",
+    updateDownloadError: "Failed to download update package",
+  },
+} as const;
+
+export function getTranslation(lang: Language = "fa") {
+  return translations[lang] || translations.fa;
+}
+
+export function updateDocumentDirection(lang: Language = "fa") {
+  const root = document.documentElement;
+  const isFa = lang === "fa";
+  root.setAttribute("lang", isFa ? "fa" : "en");
+  root.setAttribute("dir", isFa ? "rtl" : "ltr");
+}

@@ -8,8 +8,9 @@ import {
   saveSyncConfig,
   type SyncConfig,
 } from "@/lib/cloudSync.ts";
+import { getTranslation } from "@/lib/i18n.ts";
 import { mergeDBs } from "@/lib/syncEngine.ts";
-import type { DB } from "@/lib/types.ts";
+import type { DB, Language } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
   Check,
@@ -30,24 +31,28 @@ import { useEffect, useState } from "react";
 interface Props {
   open: boolean;
   db: DB;
+  lang?: Language;
   onSyncApply: (newDb: DB) => void;
   onClose: () => void;
   onMessage: (msg: string) => void;
 }
 
-export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) {
+export function SyncModal({ open, db, lang = "fa", onSyncApply, onClose, onMessage }: Props) {
+  const t = getTranslation(lang);
+  const isFa = lang === "fa";
+
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(loadSyncConfig());
   const [isSyncing, setIsSyncing] = useState(false);
   const [serverStatus, setServerStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
 
-  // مدال و بارکد اتصال سریع
+  // Fast device pairing & QR state
   const [showPairQr, setShowPairQr] = useState(false);
   const [pairingQrUrl, setPairingQrUrl] = useState<string>("");
   const [pastePairToken, setPastePairToken] = useState("");
   const [isPairCopied, setIsPairCopied] = useState(false);
 
-  // تولید QR Code جفت‌سازی بر اساس کانفیگ فعلی
+  // Generate pairing QR code based on active config
   useEffect(() => {
     if (!open || !showPairQr) return;
     if (
@@ -75,7 +80,7 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
     }
   }, [open, showPairQr, syncConfig]);
 
-  // بستن مدال با Escape
+  // Close modal on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -85,15 +90,15 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
 
   if (!open) return null;
 
-  // تست ارتباط با سرور شخصی
+  // Test custom relay server health
   const handleTestServer = async () => {
     if (!syncConfig.serverUrl.trim()) {
       setServerStatus("error");
-      setStatusMessage("لطفاً آدرس سرور را وارد کنید");
+      setStatusMessage(t.syncServerEnterUrl);
       return;
     }
     setServerStatus("testing");
-    setStatusMessage("در حال بررسی سلامت سرور…");
+    setStatusMessage(t.syncServerTesting);
 
     try {
       const cleanUrl = syncConfig.serverUrl.replace(/\/+$/, "");
@@ -104,25 +109,27 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
       const res = await fetch(`${cleanUrl}/health`, { headers });
       if (res.ok) {
         setServerStatus("ok");
-        setStatusMessage("ارتباط با سرور برقرار و معتبر است");
+        setStatusMessage(t.syncServerOk);
       } else if (res.status === 401) {
         setServerStatus("error");
-        setStatusMessage("توکن امنیتی سرور نامعتبر است (401)");
+        setStatusMessage(t.syncServerUnauthorized);
       } else {
         setServerStatus("error");
-        setStatusMessage(`پاسخ ناموفق از سرور (${res.status})`);
+        setStatusMessage(t.syncServerFail(res.status));
       }
     } catch (err) {
       setServerStatus("error");
-      setStatusMessage(`عدم دسترسی به سرور: ${err instanceof Error ? err.message : "خطای شبکه"}`);
+      setStatusMessage(
+        t.syncServerUnreachable(err instanceof Error ? err.message : "Network error"),
+      );
     }
   };
 
-  // همگام‌سازی ابری دوطرفه (Pull -> Merge -> Push)
+  // Two-way cloud sync (Pull -> Merge -> Push)
   const handleCloudSync = async (overrideCfg?: SyncConfig) => {
     const cfg = overrideCfg || syncConfig;
     if (!cfg.serverUrl.trim() || !cfg.vaultId.trim() || !cfg.secretKey.trim()) {
-      onMessage("لطفاً آدرس سرور، کد والت و رمز اختصاصی را کامل کنید");
+      onMessage(t.syncMissingFields);
       return;
     }
 
@@ -130,17 +137,17 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
     try {
       saveSyncConfig(cfg);
 
-      // ۱. پول کردن از والت سرور
+      // 1. Pull remote encrypted vault
       const remote = await pullFromVault(cfg.serverUrl, cfg.vaultId, cfg.secretKey, cfg.authToken);
 
       let finalDb = db;
       if (remote) {
-        // ۲. ادغام بدون تداخل
+        // 2. Conflict-free merge
         finalDb = mergeDBs(db, remote.db);
         onSyncApply(finalDb);
       }
 
-      // ۳. پوش نسخه نهایی
+      // 3. Push merged state
       await pushToVault(cfg.serverUrl, cfg.vaultId, cfg.secretKey, finalDb, cfg.authToken);
 
       const now = Date.now();
@@ -148,15 +155,15 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
       setSyncConfig(updatedConfig);
       saveSyncConfig(updatedConfig);
 
-      onMessage("همگام‌سازی سرور با موفقیت انجام شد");
+      onMessage(t.syncSuccess);
     } catch (err) {
-      onMessage(`خطا در همگام‌سازی: ${err instanceof Error ? err.message : "خطای ناشناخته"}`);
+      onMessage(t.syncError(err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // اعمال توکن جفت‌سازی (Pairing Token) وارد شده از دستگاه دیگر
+  // Apply pairing token received from another device
   const handleApplyPairToken = () => {
     if (!pastePairToken.trim()) return;
     try {
@@ -169,14 +176,14 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
       setSyncConfig(next);
       saveSyncConfig(next);
       setPastePairToken("");
-      onMessage("تنظیمات اتصال از بارکد/توکن بازخوانی شد؛ در حال همگام‌سازی…");
+      onMessage(t.syncPairSuccess);
       void handleCloudSync(next);
     } catch {
-      onMessage("کد اتصال نامعتبر است");
+      onMessage(t.syncPairInvalid);
     }
   };
 
-  // تولید کد والت رندوم
+  // Generate random vault ID
   const handleGenerateVaultId = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "TASK-";
@@ -186,7 +193,7 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
     const next = { ...syncConfig, vaultId: code };
     setSyncConfig(next);
     saveSyncConfig(next);
-    onMessage(`کد والت جدید ساخته شد: ${code}`);
+    onMessage(t.syncVaultGenerated(code));
   };
 
   const isConfigReady =
@@ -203,33 +210,29 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* هدر مدال */}
+        {/* Header */}
         <div className="mb-4 flex items-center justify-between border-b border-zinc-800/80 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="grid size-8 place-items-center rounded-xl bg-sky-950/80 border border-sky-800/60 text-sky-400">
               <Cloud className="size-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-zinc-100">
-                همگام‌سازی ابری TaskDrop (E2EE)
-              </h2>
-              <p className="text-[11px] text-zinc-400">
-                سینک ایمن دوطرفه با رمزنگاری سرتاسری ۲۵۶ بیتی روی دستگاه شما
-              </p>
+              <h2 className="text-base font-semibold text-zinc-100">{t.syncTitle}</h2>
+              <p className="text-[11px] text-zinc-400">{t.syncSubtitle}</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" aria-label="بستن" onClick={onClose}>
+          <Button variant="ghost" size="icon" aria-label={t.close} onClick={onClose}>
             <X />
           </Button>
         </div>
 
         <div className="space-y-4">
-          {/* کارت اتصال سریع (اسکن QR یا پیست کلید اتصال) */}
+          {/* Quick Pair Card (Scan QR or Paste Token) */}
           <div className="rounded-xl border border-sky-900/50 bg-sky-950/20 p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-sky-300">
                 <Sparkles className="size-3.5 text-sky-400" />
-                اتصال سریع بین دستگاه‌ها
+                {t.syncQuickPair}
               </span>
               <button
                 type="button"
@@ -243,11 +246,11 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
                 )}
               >
                 <QrCode className="size-3" />
-                <span>{showPairQr ? "بستن بارکد" : "نمایش بارکد اتصال سریع"}</span>
+                <span>{showPairQr ? t.syncHideQr : t.syncShowQr}</span>
               </button>
             </div>
 
-            {/* بخش نمایش بارکد اتصال سریع */}
+            {/* QR Code Display Card */}
             {showPairQr && isConfigReady && (
               <div className="my-3 flex flex-col items-center rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
                 {pairingQrUrl ? (
@@ -255,56 +258,51 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
                     <img src={pairingQrUrl} alt="Pairing QR" className="size-44 sm:size-48" />
                   </div>
                 ) : (
-                  <div className="py-8 text-xs text-zinc-500">در حال تولید بارکد…</div>
+                  <div className="py-8 text-xs text-zinc-500">Generating QR...</div>
                 )}
-                <p className="mt-2 text-center text-[11px] text-zinc-300">
-                  این بارکد را با دوربین گوشی یا دستگاه دوم اسکن کنید تا تمام اطلاعات و رمز خودکار
-                  وارد شود.
-                </p>
+                <p className="mt-2 text-center text-[11px] text-zinc-300">{t.syncQrDesc}</p>
                 <button
                   type="button"
                   onClick={async () => {
                     const token = encodeSyncPairingToken(syncConfig);
                     await navigator.clipboard.writeText(token);
                     setIsPairCopied(true);
-                    onMessage("کلید جفت‌سازی کپی شد");
+                    onMessage(t.syncTokenCopied);
                     setTimeout(() => setIsPairCopied(false), 2000);
                   }}
                   className="mt-2 flex items-center gap-1 text-xs text-sky-400 hover:underline cursor-pointer"
                 >
                   <ClipboardCopy className="size-3" />
-                  <span>
-                    {isPairCopied ? "کپی شد!" : "کپی رشته اتصال برای پیست در دستگاه دیگر"}
-                  </span>
+                  <span>{isPairCopied ? t.copied : t.syncCopyToken}</span>
                 </button>
               </div>
             )}
 
-            {/* پیست کلید اتصال برای دستگاه مقصد */}
+            {/* Paste Token Input */}
             <div className="flex gap-2 mt-2">
               <input
                 value={pastePairToken}
                 onChange={(e) => setPastePairToken(e.target.value)}
-                placeholder="پیست کلید اتصال دریافت شده از دستگاه دیگر…"
+                placeholder={t.syncTokenPlaceholder}
                 className="flex-1 rounded-lg border border-sky-900/70 bg-zinc-950 px-2.5 py-1 text-xs text-zinc-100 font-mono outline-none focus:border-sky-500"
               />
               <Button
                 size="sm"
                 onClick={handleApplyPairToken}
                 disabled={!pastePairToken.trim()}
-                className="bg-sky-600 text-white hover:bg-sky-500 text-xs font-semibold px-3"
+                className="bg-sky-600 text-white hover:bg-sky-500 text-xs font-semibold px-3 cursor-pointer"
               >
-                جفت‌سازی فوری
+                {t.syncPairNow}
               </Button>
             </div>
           </div>
 
-          {/* فرم تنظیمات سرور شخصی */}
+          {/* Manual Relay Server Settings */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 space-y-3">
-            {/* آدرس سرور */}
+            {/* Server URL */}
             <div>
               <label className="block mb-1 text-[11px] font-medium text-zinc-300">
-                آدرس سرور رله (Server URL):
+                {t.syncServerUrl}
               </label>
               <div className="flex gap-2">
                 <input
@@ -331,7 +329,7 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
                   ) : serverStatus === "ok" ? (
                     <Check className="size-3 text-emerald-400" />
                   ) : (
-                    "تست سرور"
+                    t.syncServerTest
                   )}
                 </Button>
               </div>
@@ -347,15 +345,15 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
               )}
             </div>
 
-            {/* توکن امنیتی سرور (اختیاری برای سرورهای محافظت شده) */}
+            {/* Auth Token (Optional) */}
             <div>
               <label className="block mb-1 text-[11px] font-medium text-zinc-300">
-                توکن امنیتی سرور (Server Auth Token):
+                {t.syncAuthToken}
               </label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="در صورت فعال بودن AUTH_TOKEN روی ورکر"
+                  placeholder={t.syncAuthTokenPlaceholder}
                   value={syncConfig.authToken || ""}
                   onChange={(e) => {
                     const next = { ...syncConfig, authToken: e.target.value };
@@ -368,16 +366,16 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
               </div>
             </div>
 
-            {/* کد والت (شناسه صندوق) */}
+            {/* Vault ID */}
             <div>
               <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-zinc-300">
-                <span>کد والت (Sync Vault ID):</span>
+                <span>{t.syncVaultId}</span>
                 <button
                   type="button"
                   onClick={handleGenerateVaultId}
                   className="text-[10px] text-sky-400 hover:underline cursor-pointer"
                 >
-                  تولید کد جدید
+                  {t.syncGenerateVault}
                 </button>
               </div>
               <div className="relative">
@@ -396,15 +394,15 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
               </div>
             </div>
 
-            {/* رمز اختصاصی رمزنگاری */}
+            {/* Encryption Key */}
             <div>
               <label className="block mb-1 text-[11px] font-medium text-zinc-300">
-                رمز اختصاصی رمزنگاری (End-to-End Encryption Key):
+                {t.syncSecretKey}
               </label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="کلمه عبور امن برای رمزنگاری دیتای شما"
+                  placeholder={t.syncSecretKeyPlaceholder}
                   value={syncConfig.secretKey}
                   onChange={(e) => {
                     const next = { ...syncConfig, secretKey: e.target.value };
@@ -415,41 +413,38 @@ export function SyncModal({ open, db, onSyncApply, onClose, onMessage }: Props) 
                 />
                 <Lock className="absolute end-2.5 top-2 size-3.5 text-zinc-500" />
               </div>
-              <p className="mt-1 text-[10px] text-zinc-500">
-                دیتا با استاندارد AES-GCM روی مرورگر شما رمز می‌شود؛ حتی سرور هم به محتوای خام دسترسی
-                ندارد.
-              </p>
+              <p className="mt-1 text-[10px] text-zinc-500">{t.syncSecretKeyHint}</p>
             </div>
 
-            {/* دکمه همگام‌سازی فوری */}
+            {/* Sync Button */}
             <Button
               onClick={() => void handleCloudSync()}
               disabled={isSyncing}
-              className="w-full gap-2 bg-sky-600 text-white hover:bg-sky-500 font-semibold text-xs mt-2"
+              className="w-full gap-2 bg-sky-600 text-white hover:bg-sky-500 font-semibold text-xs mt-2 cursor-pointer"
             >
               <RefreshCw className={cn("size-3.5", isSyncing && "animate-spin")} />
-              <span>{isSyncing ? "در حال همگام‌سازی و ادغام…" : "همگام‌سازی فوری (Sync Now)"}</span>
+              <span>{isSyncing ? t.syncing : t.syncNow}</span>
             </Button>
           </div>
 
           {syncConfig.lastSyncedAt && (
             <div className="flex items-center justify-between text-[11px] text-zinc-400 px-1">
-              <span>آخرین همگام‌سازی موفق:</span>
+              <span>{t.syncLastSuccess}</span>
               <span className="font-mono text-zinc-300">
-                {new Date(syncConfig.lastSyncedAt).toLocaleTimeString("fa-IR")}
+                {new Date(syncConfig.lastSyncedAt).toLocaleTimeString(isFa ? "fa-IR" : "en-US")}
               </span>
             </div>
           )}
         </div>
 
-        {/* فوتر مدال */}
+        {/* Footer */}
         <div className="mt-5 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs text-zinc-500">
           <div className="flex items-center gap-1">
             <HelpCircle className="size-3.5 text-zinc-400" />
-            <span>ادغام خودکار و بدون تداخل (Conflict-Free)</span>
+            <span>{t.syncConflictFreeNotice}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            بستن
+            {t.close}
           </Button>
         </div>
       </div>

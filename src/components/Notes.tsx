@@ -1,17 +1,20 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import type { Note } from "@/lib/types.ts";
+import { getTranslation } from "@/lib/i18n.ts";
+import type { Language, Note } from "@/lib/types.ts";
 import { Pin, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 interface Props {
   notes: Note[];
+  lang?: Language;
   onAdd: (text: string) => void;
   onRemove: (id: string) => void;
 }
 
-/** نکته‌های ثابت — چیزهایی که باید همیشه جلوی چشم باشند، نه تسک. */
-export function Notes({ notes, onAdd, onRemove }: Props) {
+/** Pinned focus notes — items that should stay in sight at all times */
+export function Notes({ notes, lang = "fa", onAdd, onRemove }: Props) {
+  const t = getTranslation(lang);
   const [adding, setAdding] = useState(false);
   const [value, setValue] = useState("");
 
@@ -30,13 +33,13 @@ export function Notes({ notes, onAdd, onRemove }: Props) {
       <div className="mb-2 flex items-center justify-between">
         <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
           <Pin className="size-3.5 text-amber-400" />
-          جلوی چشم
+          {t.keepInSight}
         </h2>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="افزودن نکته"
-          title="افزودن نکته (M)"
+          aria-label={t.addNote}
+          title={t.addNote}
           onClick={() => setAdding(true)}
         >
           <Plus />
@@ -53,9 +56,9 @@ export function Notes({ notes, onAdd, onRemove }: Props) {
             <span className="flex-1 whitespace-pre-wrap break-words">{n.text}</span>
             <button
               type="button"
-              aria-label="حذف نکته"
+              aria-label={t.deleteNoteAria}
               onClick={() => onRemove(n.id)}
-              className="mt-0.5 text-zinc-500 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+              className="mt-0.5 text-zinc-500 opacity-0 transition hover:text-red-400 group-hover:opacity-100 cursor-pointer"
             >
               <X className="size-3.5" />
             </button>
@@ -67,7 +70,7 @@ export function Notes({ notes, onAdd, onRemove }: Props) {
         <Input
           autoFocus
           value={value}
-          placeholder="نکته…"
+          placeholder={t.notePlaceholder}
           className="mt-2 h-9"
           onChange={(e) => setValue(e.target.value)}
           onBlur={submit}

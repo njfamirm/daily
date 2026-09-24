@@ -9,7 +9,7 @@ export function useDB() {
     saveDB(db);
   }, [db]);
 
-  // همگام‌سازی بین تب‌های باز
+  // Synchronize state across multiple browser tabs
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "daily.db.v1") setDb(loadDB());

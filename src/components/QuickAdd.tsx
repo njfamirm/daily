@@ -1,8 +1,10 @@
 import { Input } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
+import { getTranslation } from "@/lib/i18n.ts";
 import { unlockAudio } from "@/lib/notify.ts";
 import { formatDue, parseInput } from "@/lib/parse.ts";
 import { getTagStyle } from "@/lib/tags.ts";
+import type { Language } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import { AlignLeft, Clock, Flame, Hash, Repeat, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +19,7 @@ interface SuggestionItem {
   priorityColor?: string;
 }
 
-const DEFAULT_TAGS = [
+const DEFAULT_TAGS_FA = [
   "کار",
   "پروژه",
   "شخصی",
@@ -31,7 +33,21 @@ const DEFAULT_TAGS = [
   "توسعه",
 ];
 
-const DATE_SUGGESTIONS = [
+const DEFAULT_TAGS_EN = [
+  "work",
+  "project",
+  "personal",
+  "shopping",
+  "finance",
+  "meeting",
+  "health",
+  "fitness",
+  "reading",
+  "idea",
+  "dev",
+];
+
+const DATE_SUGGESTIONS_FA = [
   { text: "فردا ۹:۰۰", label: "فردا صبح ساعت ۹" },
   { text: "فردا عصر", label: "فردا ساعت ۱۷:۰۰" },
   { text: "امروز ۱۸:۰۰", label: "امروز عصر ساعت ۱۸" },
@@ -41,18 +57,36 @@ const DATE_SUGGESTIONS = [
   { text: "یک ربع دیگه", label: "۱۵ دقیقه بعد" },
 ];
 
-const REPEAT_SUGGESTIONS = [
+const DATE_SUGGESTIONS_EN = [
+  { text: "tomorrow 9am", label: "Tomorrow morning 9:00 AM" },
+  { text: "tomorrow 5pm", label: "Tomorrow afternoon 5:00 PM" },
+  { text: "today 6pm", label: "Today evening 6:00 PM" },
+  { text: "monday 9am", label: "Next Monday 9:00 AM" },
+  { text: "weekend", label: "Saturday 9:00 AM" },
+  { text: "in 30 min", label: "30 minutes from now" },
+  { text: "in 15 min", label: "15 minutes from now" },
+];
+
+const REPEAT_SUGGESTIONS_FA = [
   { text: "هر روز", label: "تکرار روزانه" },
   { text: "هر هفته", label: "تکرار هفتگی" },
   { text: "هر ماه", label: "تکرار ماهانه" },
 ];
 
+const REPEAT_SUGGESTIONS_EN = [
+  { text: "daily", label: "Daily recurrence" },
+  { text: "weekly", label: "Weekly recurrence" },
+  { text: "monthly", label: "Monthly recurrence" },
+];
+
 interface Props {
   onAdd: (raw: string) => void;
   existingTags?: string[];
+  lang?: Language;
 }
 
-export function QuickAdd({ onAdd, existingTags = [] }: Props) {
+export function QuickAdd({ onAdd, existingTags = [], lang = "fa" }: Props) {
+  const t = getTranslation(lang);
   const [value, setValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isOpen, setIsOpen] = useState(false);
@@ -61,7 +95,7 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
 
   const preview = useMemo(() => (value.trim() ? parseInput(value) : null), [value]);
 
-  // استخراج کلمه فعال در موقعیت نشانگر
+  // Extract currently active word info around cursor position
   const activeWordInfo = useMemo(() => {
     if (!value) return { word: "", start: 0, end: 0 };
     const cursor = ref.current?.selectionStart ?? value.length;
@@ -78,100 +112,142 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
     return { word, start, end };
   }, [value]);
 
-  // محاسبه لیست پیشنهادهای هوشمند
+  // Calculate intelligent autocomplete suggestions
   const suggestions = useMemo<SuggestionItem[]>(() => {
     const rawWord = activeWordInfo.word.trim();
     if (!rawWord && !value.trim()) return [];
 
     const items: SuggestionItem[] = [];
+    const isFa = lang === "fa";
+    const defaultTags = isFa ? DEFAULT_TAGS_FA : DEFAULT_TAGS_EN;
+    const dateSuggestions = isFa ? DATE_SUGGESTIONS_FA : DATE_SUGGESTIONS_EN;
+    const repeatSuggestions = isFa ? REPEAT_SUGGESTIONS_FA : REPEAT_SUGGESTIONS_EN;
 
-    // ۱. پیشنهاد هشتگ و برچسب‌ها (#)
+    // 1. Tag & Hashtag suggestions (#)
     if (rawWord.startsWith("#")) {
       const query = rawWord.replace(/^#/, "").toLowerCase();
-      const allTagsPool = Array.from(new Set([...DEFAULT_TAGS, ...existingTags]));
+      const allTagsPool = Array.from(new Set([...defaultTags, ...existingTags]));
       const matched = allTagsPool.filter((t) => t.toLowerCase().includes(query));
 
-      matched.slice(0, 7).forEach((t) => {
+      matched.slice(0, 7).forEach((tag) => {
         items.push({
-          id: `tag-${t}`,
+          id: `tag-${tag}`,
           type: "tag",
-          insertText: `#${t}`,
-          displayTitle: `#${t}`,
-          categoryLabel: "برچسب",
-          tagColor: getTagStyle(t),
+          insertText: `#${tag}`,
+          displayTitle: `#${tag}`,
+          categoryLabel: t.categoryTag,
+          tagColor: getTagStyle(tag),
         });
       });
 
-      // اگر تگ جدیدی تایپ کرده که در لیست نیست، امکان ساخت پیشنهاد شود
-      if (query && !matched.some((t) => t.toLowerCase() === query)) {
+      if (query && !matched.some((tag) => tag.toLowerCase() === query)) {
         items.push({
           id: `tag-custom-${query}`,
           type: "tag",
           insertText: `#${query}`,
           displayTitle: `#${query}`,
-          categoryLabel: "برچسب جدید",
+          categoryLabel: t.categoryTagNew,
           tagColor: getTagStyle(query),
         });
       }
     }
 
-    // ۲. پیشنهاد اولویت‌ها (! یا کلمات اولویت)
+    // 2. Priority suggestions (! or priority triggers)
     const isPriorityTrigger =
       rawWord.startsWith("!") ||
-      ["اول", "اولویت", "فور", "فوری", "ضرور", "مهم"].some((p) => rawWord.includes(p));
+      [
+        "اول",
+        "اولویت",
+        "فور",
+        "فوری",
+        "ضرور",
+        "مهم",
+        "p1",
+        "p2",
+        "p3",
+        "urg",
+        "high",
+        "med",
+        "low",
+      ].some((p) => rawWord.toLowerCase().includes(p));
 
     if (isPriorityTrigger) {
       items.push(
         {
           id: "p-high",
           type: "priority",
-          insertText: "!فوری",
-          displayTitle: "!فوری",
-          categoryLabel: "اولویت بالا",
+          insertText: isFa ? "!فوری" : "!urgent",
+          displayTitle: isFa ? "!فوری" : "!urgent",
+          categoryLabel: t.categoryPriorityHigh,
           priorityColor: "text-red-400",
         },
         {
           id: "p-medium",
           type: "priority",
-          insertText: "!متوسط",
-          displayTitle: "!متوسط",
-          categoryLabel: "اولویت متوسط",
+          insertText: isFa ? "!متوسط" : "!medium",
+          displayTitle: isFa ? "!متوسط" : "!medium",
+          categoryLabel: t.categoryPriorityMedium,
           priorityColor: "text-amber-400",
         },
         {
           id: "p-low",
           type: "priority",
-          insertText: "!کم",
-          displayTitle: "!کم",
-          categoryLabel: "اولویت پایین",
+          insertText: isFa ? "!کم" : "!low",
+          displayTitle: isFa ? "!کم" : "!low",
+          categoryLabel: t.categoryPriorityLow,
           priorityColor: "text-blue-400",
         },
       );
     }
 
-    // ۳. پیشنهاد تاریخ و زمان
-    const dateTriggers = [
-      "فرد",
-      "امرو",
-      "ساع",
-      "هفت",
-      "شنب",
-      "دوش",
-      "سه",
-      "چها",
-      "پنج",
-      "جمع",
-      "پس",
-      "صبح",
-      "عصر",
-      "شب",
-      "ربع",
-      "دقیق",
-    ];
-    if (dateTriggers.some((dt) => rawWord.includes(dt))) {
-      DATE_SUGGESTIONS.filter(
-        (ds) => ds.text.includes(rawWord) || ds.label.includes(rawWord) || rawWord.length < 3,
-      )
+    // 3. Date & time suggestions
+    const dateTriggers = isFa
+      ? [
+          "فرد",
+          "امرو",
+          "ساع",
+          "هفت",
+          "شنب",
+          "دوش",
+          "سه",
+          "چها",
+          "پنج",
+          "جمع",
+          "پس",
+          "صبح",
+          "عصر",
+          "شب",
+          "ربع",
+          "دقیق",
+        ]
+      : [
+          "tmr",
+          "tom",
+          "today",
+          "at ",
+          "week",
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun",
+          "morn",
+          "even",
+          "noon",
+          "night",
+          "in ",
+        ];
+
+    if (dateTriggers.some((dt) => rawWord.toLowerCase().includes(dt))) {
+      dateSuggestions
+        .filter(
+          (ds) =>
+            ds.text.toLowerCase().includes(rawWord.toLowerCase()) ||
+            ds.label.toLowerCase().includes(rawWord.toLowerCase()) ||
+            rawWord.length < 3,
+        )
         .slice(0, 4)
         .forEach((ds) => {
           items.push({
@@ -184,9 +260,15 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
         });
     }
 
-    // ۴. پیشنهاد تکرار
-    if (rawWord.startsWith("هر") || rawWord.includes("تکر")) {
-      REPEAT_SUGGESTIONS.forEach((rs) => {
+    // 4. Recurrence suggestions
+    if (
+      rawWord.startsWith("هر") ||
+      rawWord.includes("تکر") ||
+      rawWord.includes("every") ||
+      rawWord.includes("dai") ||
+      rawWord.includes("week")
+    ) {
+      repeatSuggestions.forEach((rs) => {
         items.push({
           id: `repeat-${rs.text}`,
           type: "repeat",
@@ -197,26 +279,31 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
       });
     }
 
-    // ۵. پیشنهاد توضیحات تسک
-    if (rawWord.startsWith("/") || rawWord.includes("توضیح")) {
+    // 5. Task description indicator
+    if (
+      rawWord.startsWith("/") ||
+      rawWord.includes("توضیح") ||
+      rawWord.includes("desc") ||
+      rawWord.includes("note")
+    ) {
       items.push({
         id: "desc-help",
         type: "desc",
         insertText: "// ",
-        displayTitle: "// توضیحات بیشتر",
-        categoryLabel: "یادداشت ثانویه تسک",
+        displayTitle: isFa ? "// توضیحات بیشتر" : "// Secondary note",
+        categoryLabel: t.categoryDesc,
       });
     }
 
     return items;
-  }, [activeWordInfo.word, value, existingTags]);
+  }, [activeWordInfo.word, value, existingTags, lang, t]);
 
   useEffect(() => {
     setIsOpen(suggestions.length > 0);
     setActiveIndex(-1);
   }, [suggestions]);
 
-  // جایگزینی کلمه فعال با پیشنهاد انتخاب شده
+  // Apply selected autocomplete suggestion
   const applySuggestion = (item: SuggestionItem) => {
     if (!ref.current) return;
     const { start, end } = activeWordInfo;
@@ -240,6 +327,12 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
     }, 10);
   };
 
+  const repeatMap: Record<string, string> = {
+    daily: lang === "fa" ? "هر روز" : "Daily",
+    weekly: lang === "fa" ? "هر هفته" : "Weekly",
+    monthly: lang === "fa" ? "هر ماه" : "Monthly",
+  };
+
   return (
     <div className="relative">
       <Input
@@ -251,7 +344,7 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="sentences"
-        placeholder="چی یادت نره؟  مثلاً: فردا ساعت ۱۰ جلسه فنی !فوری #کار"
+        placeholder={t.quickAddPlaceholder}
         onChange={(e) => setValue(e.target.value)}
         onFocus={(e) => {
           unlockAudio();
@@ -310,7 +403,7 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
         </Kbd>
       </div>
 
-      {/* منوی شناور پیشنهادهای هوشمند */}
+      {/* Floating Smart Suggestions Menu */}
       {isOpen && suggestions.length > 0 && (
         <div
           ref={listRef}
@@ -319,10 +412,10 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
           <div className="mb-1 flex items-center justify-between px-2.5 py-1 text-[11px] text-zinc-400">
             <span className="flex items-center gap-1.5 font-medium">
               <Sparkles className="size-3 text-amber-400" />
-              پیشنهادهای هوشمند
+              {t.smartSuggestions}
             </span>
             <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-              با <Kbd size="xs">Tab</Kbd> یا <Kbd size="xs">↵</Kbd> تکمیل کنید
+              {t.suggestionHint}
             </span>
           </div>
 
@@ -338,7 +431,7 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
                     applySuggestion(item);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-1.5 text-xs transition-colors text-start",
+                    "flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-1.5 text-xs transition-colors text-start cursor-pointer",
                     isSelected
                       ? "bg-zinc-800 text-white"
                       : "text-zinc-200 hover:bg-zinc-900 hover:text-white",
@@ -400,36 +493,36 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
         </div>
       )}
 
-      {/* پیش‌نمایش پارس شده از ورودی */}
+      {/* Live Input Preview */}
       {preview && !isOpen && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2 px-1 text-xs">
           <span className="font-semibold text-zinc-100">{preview.title || "…"}</span>
           {preview.priority === "high" && (
             <span className="inline-flex items-center gap-1 rounded-md border border-red-800/80 bg-red-950/80 px-2 py-0.5 text-[11px] font-semibold text-red-300">
               <Flame className="size-3 text-red-400" />
-              فوری
+              {t.priorityHigh}
             </span>
           )}
           {preview.priority === "medium" && (
             <span className="inline-flex items-center rounded-md border border-amber-800/80 bg-amber-950/80 px-2 py-0.5 text-[11px] font-medium text-amber-300">
-              اولویت متوسط
+              {t.priorityMedium}
             </span>
           )}
           {preview.due && (
             <span className="rounded-md bg-white px-2.5 py-0.5 font-semibold text-black shadow-xs">
-              {formatDue(preview.due.toISOString())}
+              {formatDue(preview.due.toISOString(), lang)}
             </span>
           )}
           {preview.repeat !== "none" && (
             <span className="rounded-md border border-zinc-700 bg-zinc-800/80 px-2 py-0.5 text-zinc-300">
-              {{ daily: "هر روز", weekly: "هر هفته", monthly: "هر ماه" }[preview.repeat]}
+              {repeatMap[preview.repeat]}
             </span>
           )}
-          {preview.tags.map((t) => {
-            const style = getTagStyle(t);
+          {preview.tags.map((tag) => {
+            const style = getTagStyle(tag);
             return (
               <span
-                key={t}
+                key={tag}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium",
                   style.bg,
@@ -437,7 +530,7 @@ export function QuickAdd({ onAdd, existingTags = [] }: Props) {
                   style.border,
                 )}
               >
-                <span className={cn("size-1.5 rounded-full", style.dot)} />#{t}
+                <span className={cn("size-1.5 rounded-full", style.dot)} />#{tag}
               </span>
             );
           })}

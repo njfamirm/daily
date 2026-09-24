@@ -1,22 +1,26 @@
 import { Button } from "@/components/ui/button.tsx";
+import { getTranslation } from "@/lib/i18n.ts";
 import { formatDue } from "@/lib/parse.ts";
-import type { DB } from "@/lib/types.ts";
+import type { DB, Language } from "@/lib/types.ts";
 import { Check, Copy, FileText, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface Props {
   open: boolean;
   db: DB;
+  lang?: Language;
   onClose: () => void;
   onMessage: (msg: string) => void;
 }
 
-export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
+export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: Props) {
+  const t = getTranslation(lang);
+  const isFa = lang === "fa";
   const [copied, setCopied] = useState(false);
 
   const digestText = useMemo(() => {
     const now = new Date();
-    const dateStr = now.toLocaleDateString("fa-IR", {
+    const dateStr = now.toLocaleDateString(isFa ? "fa-IR" : "en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -28,81 +32,81 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
     const startOfTomorrow = endOfToday + 1;
     const endOfTomorrow = startOfTomorrow + 864e5 - 1;
 
-    // انجام‌شده‌های امروز
-    const doneToday = db.tasks.filter((t) => {
-      if (!t.doneAt) return false;
-      const doneTime = new Date(t.doneAt).getTime();
+    // Completed today
+    const doneToday = db.tasks.filter((task) => {
+      if (!task.doneAt) return false;
+      const doneTime = new Date(task.doneAt).getTime();
       return doneTime >= startOfToday && doneTime <= endOfToday;
     });
 
-    // کارهای باز سررسیدشده یا امروز
-    const openToday = db.tasks.filter((t) => {
-      if (t.done) return false;
-      if (!t.due) return false;
-      const dueTime = new Date(t.due).getTime();
+    // Open tasks for today or overdue
+    const openToday = db.tasks.filter((task) => {
+      if (task.done) return false;
+      if (!task.due) return false;
+      const dueTime = new Date(task.due).getTime();
       return dueTime <= endOfToday;
     });
 
-    // کارهای فردا
-    const tomorrowTasks = db.tasks.filter((t) => {
-      if (t.done) return false;
-      if (!t.due) return false;
-      const dueTime = new Date(t.due).getTime();
+    // Upcoming tasks for tomorrow
+    const tomorrowTasks = db.tasks.filter((task) => {
+      if (task.done) return false;
+      if (!task.due) return false;
+      const dueTime = new Date(task.due).getTime();
       return dueTime >= startOfTomorrow && dueTime <= endOfTomorrow;
     });
 
-    let md = `📅 **گزارش روزانه** — ${dateStr}\n\n`;
+    let md = `${t.digestHeader} — ${dateStr}\n\n`;
 
-    // بخش انجام‌شده
-    md += `✅ **کارهای انجام‌شده امروز (${doneToday.length} مورد):**\n`;
+    // Completed Section
+    md += `${t.digestCompletedSection(doneToday.length)}\n`;
     if (doneToday.length === 0) {
-      md += `- هنوز تسکی امروز نهایی نشده است.\n`;
+      md += `${t.digestNoCompleted}\n`;
     } else {
-      for (const t of doneToday) {
-        const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
+      for (const task of doneToday) {
+        const tagStr = task.tags.length > 0 ? ` [${task.tags.map((x) => `#${x}`).join(" ")}]` : "";
         const descStr =
-          t.description && t.description.trim()
-            ? `\n    ↳ _توضیحات انجام_: ${t.description.trim()}`
+          task.description && task.description.trim()
+            ? `\n    ↳ _${isFa ? "خلاصه" : "Summary"}_: ${task.description.trim()}`
             : "";
-        md += `- [x] ${t.title}${tagStr}${descStr}\n`;
+        md += `- [x] ${task.title}${tagStr}${descStr}\n`;
       }
     }
     md += "\n";
 
-    // بخش باقی‌مانده امروز
+    // Remaining Section
     if (openToday.length > 0) {
-      md += `⏳ **باقی‌مانده‌های امروز (${openToday.length} مورد):**\n`;
-      for (const t of openToday) {
-        const pStr = t.priority === "high" ? " 🚨 فوری" : "";
-        const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
-        md += `- [ ] ${t.title}${pStr}${tagStr} (${formatDue(t.due)})\n`;
+      md += `${t.digestRemainingSection(openToday.length)}\n`;
+      for (const task of openToday) {
+        const pStr = task.priority === "high" ? (isFa ? " 🚨 فوری" : " 🚨 Urgent") : "";
+        const tagStr = task.tags.length > 0 ? ` [${task.tags.map((x) => `#${x}`).join(" ")}]` : "";
+        md += `- [ ] ${task.title}${pStr}${tagStr} (${formatDue(task.due, lang)})\n`;
       }
       md += "\n";
     }
 
-    // بخش برنامه‌های فردا
+    // Tomorrow Section
     if (tomorrowTasks.length > 0) {
-      md += `🎯 **برنامه‌های فردا (${tomorrowTasks.length} مورد):**\n`;
-      for (const t of tomorrowTasks) {
-        const pStr = t.priority === "high" ? " 🚨 فوری" : "";
-        const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
-        md += `- [ ] ${t.title}${pStr}${tagStr}\n`;
+      md += `${t.digestTomorrowSection(tomorrowTasks.length)}\n`;
+      for (const task of tomorrowTasks) {
+        const pStr = task.priority === "high" ? (isFa ? " 🚨 فوری" : " 🚨 Urgent") : "";
+        const tagStr = task.tags.length > 0 ? ` [${task.tags.map((x) => `#${x}`).join(" ")}]` : "";
+        md += `- [ ] ${task.title}${pStr}${tagStr}\n`;
       }
       md += "\n";
     }
 
-    // بخش نکات ثابت
+    // Pinned Notes
     if (db.notes.length > 0) {
-      md += `📌 **یادداشت‌های جلوی چشم:**\n`;
-      for (const n of db.notes) {
-        md += `- ${n.text}\n`;
+      md += `${t.digestNotesSection}\n`;
+      for (const note of db.notes) {
+        md += `- ${note.text}\n`;
       }
       md += "\n";
     }
 
-    md += `---\n_تولید شده توسط اپ daily_`;
+    md += t.digestFooter;
     return md;
-  }, [db]);
+  }, [db, isFa, lang, t]);
 
   if (!open) return null;
 
@@ -110,10 +114,10 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
     try {
       await navigator.clipboard.writeText(digestText);
       setCopied(true);
-      onMessage("گزارش روزانه در کلیپ‌بورد کپی شد");
+      onMessage(t.digestCopySuccess);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      onMessage("کپی نشد");
+      onMessage(t.digestCopyFail);
     }
   };
 
@@ -131,16 +135,14 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
             <div className="grid size-7 place-items-center rounded-lg bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
               <FileText className="size-4" />
             </div>
-            <h2 className="text-base font-semibold text-zinc-100">گزارش روزانه</h2>
+            <h2 className="text-base font-semibold text-zinc-100">{t.digestTitle}</h2>
           </div>
-          <Button variant="ghost" size="icon" aria-label="بستن" onClick={onClose}>
+          <Button variant="ghost" size="icon" aria-label={t.close} onClick={onClose}>
             <X />
           </Button>
         </div>
 
-        <p className="mb-3 text-xs leading-6 text-zinc-400">
-          خلاصه کارهای انجام‌شده و برنامه‌های آینده برای مرور شخصی یا ارسال در شبکه‌های اجتماعی و اسلک:
-        </p>
+        <p className="mb-3 text-xs leading-6 text-zinc-400">{t.digestDesc}</p>
 
         <div className="relative">
           <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-900/90 p-4 font-mono text-xs leading-6 text-zinc-200">
@@ -148,19 +150,19 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
           </pre>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3">
-          <span className="text-[11px] text-zinc-500">فرمت استاندارد مارک‌داون</span>
+        <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs">
+          <span className="text-[11px] text-zinc-500">{t.digestStandardMd}</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
-              بستن
+              {t.close}
             </Button>
             <Button
               size="sm"
               onClick={handleCopy}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500 font-semibold"
+              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500 font-semibold cursor-pointer"
             >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? "کپی شد" : "کپی متن گزارش"}
+              {copied ? t.digestCopied : t.digestCopy}
             </Button>
           </div>
         </div>

@@ -6,10 +6,17 @@ import {
   type UpdateManifest,
   type InstalledInfo,
 } from "@/native/updater.ts";
+import { getTranslation } from "@/lib/i18n.ts";
+import type { Language } from "@/lib/types.ts";
 import { Download, RefreshCw, X, ShieldAlert } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-export const UpdateDialog: React.FC = () => {
+interface Props {
+  lang?: Language;
+}
+
+export const UpdateDialog: React.FC<Props> = ({ lang = "fa" }) => {
+  const t = getTranslation(lang);
   const [manifest, setManifest] = useState<UpdateManifest | null>(null);
   const [installed, setInstalled] = useState<InstalledInfo | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +39,7 @@ export const UpdateDialog: React.FC = () => {
           setIsOpen(true);
         }
       } catch {
-        // Silently fail on routine background check
+        // Silently fail on background check
       }
     };
 
@@ -62,7 +69,7 @@ export const UpdateDialog: React.FC = () => {
       setIsDownloading(false);
     } catch (err: any) {
       setIsDownloading(false);
-      setError(err?.message || "خطا در دریافت فایل به‌روزرسانی");
+      setError(err?.message || t.updateDownloadError);
     }
   };
 
@@ -78,7 +85,7 @@ export const UpdateDialog: React.FC = () => {
           type="button"
           onClick={() => !isDownloading && setIsOpen(false)}
           disabled={isDownloading}
-          className="absolute top-4 left-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30"
+          className="absolute top-4 left-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -88,9 +95,9 @@ export const UpdateDialog: React.FC = () => {
             <RefreshCw className="w-5 h-5 animate-spin" style={{ animationDuration: "10s" }} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">نسخه جدید در دسترس است!</h3>
+            <h3 className="text-lg font-bold text-white">{t.updateAvailableTitle}</h3>
             <p className="text-xs text-zinc-400">
-              نسخه فعلی: {installed?.versionName || "1.0"} ➔ نسخه جدید: {manifest.versionName}
+              {t.updateVersions(installed?.versionName || "1.0", manifest.versionName)}
             </p>
           </div>
         </div>
@@ -111,7 +118,7 @@ export const UpdateDialog: React.FC = () => {
         {isDownloading ? (
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-xs text-zinc-400">
-              <span>در حال دانلود بسته نصب...</span>
+              <span>{t.updateDownloading}</span>
               <span className="font-mono text-amber-400 font-bold">{progress}%</span>
             </div>
             <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
@@ -129,14 +136,14 @@ export const UpdateDialog: React.FC = () => {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>دانلود و نصب خودکار</span>
+              <span>{t.updateInstallButton}</span>
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
               className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium text-sm transition-colors cursor-pointer"
             >
-              بعداً
+              {t.updateLater}
             </button>
           </div>
         )}

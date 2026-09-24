@@ -1,21 +1,24 @@
 import { AIMemorySheet } from "@/components/AIMemorySheet.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
+import { getTranslation } from "@/lib/i18n.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
-import type { DB } from "@/lib/types.ts";
+import type { DB, Language } from "@/lib/types.ts";
 import { Brain, Check, ClipboardCopy, ClipboardPaste } from "lucide-react";
 import { useState } from "react";
 
 interface Props {
   db: DB;
+  lang?: Language;
   onReplace: (db: DB) => void;
   onUpdateMemory?: (memory: string) => void;
   onMessage: (text: string, undo?: () => void) => void;
 }
 
-/** کپی کل دیتا (همراه توضیح ساختار برای AI) و پیست‌کردن نسخه ویرایش‌شده. */
-export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
+/** Legacy / alternative sync toolbar component */
+export function SyncBar({ db, lang = "fa", onReplace, onUpdateMemory, onMessage }: Props) {
+  const t = getTranslation(lang);
   const [copied, setCopied] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
   const [memoryOpen, setMemoryOpen] = useState(false);
@@ -36,9 +39,9 @@ export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
     try {
       onReplace(parseIncoming(text));
       setFallback(null);
-      onMessage("دیتا جایگزین شد", () => onReplace(before));
+      onMessage(t.pasteSuccess, () => onReplace(before));
     } catch (err) {
-      onMessage(`پیست نشد: ${err instanceof Error ? err.message : "ورودی نامعتبر"}`);
+      onMessage(t.pasteFailed(err instanceof Error ? err.message : "Invalid input"));
     }
   };
 
@@ -53,23 +56,23 @@ export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={copy} title="کپی کل دیتا برای AI">
+        <Button variant="outline" size="sm" onClick={copy} title={t.copyTitle}>
           {copied ? <Check /> : <ClipboardCopy />}
-          {copied ? "کپی شد" : "کپی برای AI"}
+          {copied ? t.copied : t.copy}
         </Button>
-        <Button variant="outline" size="sm" onClick={paste} title="جایگزینی با خروجی AI">
+        <Button variant="outline" size="sm" onClick={paste} title={t.pasteTitle}>
           <ClipboardPaste />
-          پیست
+          {t.paste}
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setMemoryOpen(true)}
-          title="حافظه و دستورالعمل‌های اختصاصی هوش مصنوعی"
-          className="gap-1.5 border-violet-800/60 bg-violet-950/30 text-violet-300 hover:bg-violet-900/40 hover:border-violet-600"
+          title={t.aiMemoryTitle}
+          className="gap-1.5 border-violet-800/60 bg-violet-950/30 text-violet-300 hover:bg-violet-900/40 hover:border-violet-600 cursor-pointer"
         >
           <Brain className="size-3.5 text-violet-400" />
-          حافظه AI
+          {t.aiMemory}
           {db.aiMemory?.trim() && (
             <span className="size-1.5 rounded-full bg-violet-400 animate-pulse" />
           )}
@@ -79,9 +82,10 @@ export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
       <AIMemorySheet
         open={memoryOpen}
         memory={db.aiMemory || ""}
+        lang={lang}
         onSave={(mem) => {
           onUpdateMemory?.(mem);
-          onMessage("حافظه AI به‌روزرسانی شد");
+          onMessage(t.aiMemoryUpdated);
         }}
         onClose={() => setMemoryOpen(false)}
       />
@@ -92,7 +96,7 @@ export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
             autoFocus
             rows={6}
             defaultValue={fallback}
-            placeholder="خروجی AI را اینجا پیست کن…"
+            placeholder={t.pasteFallbackPlaceholder}
             className="font-mono text-xs"
             onKeyDown={(e) => {
               if (e.key === "Escape") setFallback(null);
@@ -107,10 +111,10 @@ export function SyncBar({ db, onReplace, onUpdateMemory, onMessage }: Props) {
                 apply(document.querySelector<HTMLTextAreaElement>("#sync-fallback")?.value ?? "")
               }
             >
-              اعمال کن
+              {t.apply}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setFallback(null)}>
-              بی‌خیال
+              {t.cancel}
             </Button>
           </div>
         </div>

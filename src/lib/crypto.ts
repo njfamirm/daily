@@ -1,8 +1,7 @@
 /**
- * رمزنگاری و رمزگشایی سرتاسری (E2EE) با استاندارد AES-GCM 256-bit و Web Crypto API
+ * End-to-End Encryption (E2EE) utilities using AES-GCM 256-bit via Web Crypto API
  */
 
-// تبدیل آرایه باینری به Base64
 function bufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let binary = "";
@@ -12,7 +11,6 @@ function bufferToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// تبدیل Base64 به ArrayBuffer
 function base64ToBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -22,7 +20,7 @@ function base64ToBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// تولید کلید از رمزعبور یا کلید والت با PBKDF2
+/** Derive a 256-bit AES-GCM CryptoKey from user passphrase using PBKDF2 (100k iterations) */
 async function deriveKey(secret: string, salt: Uint8Array): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, [
@@ -43,9 +41,7 @@ async function deriveKey(secret: string, salt: Uint8Array): Promise<CryptoKey> {
   );
 }
 
-/**
- * رمزنگاری یک متن دلخواه
- */
+/** Encrypt plain text using AES-GCM 256-bit with random 16-byte salt and 12-byte IV */
 export async function encryptData(plainText: string, secretKey: string): Promise<string> {
   const enc = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -67,9 +63,7 @@ export async function encryptData(plainText: string, secretKey: string): Promise
   return JSON.stringify(payload);
 }
 
-/**
- * رمزگشایی متن رمزنگاری‌شده
- */
+/** Decrypt AES-GCM ciphertext payload back to original plain text string */
 export async function decryptData(cipherJson: string, secretKey: string): Promise<string> {
   const payload = JSON.parse(cipherJson);
   const salt = new Uint8Array(base64ToBuffer(payload.salt));

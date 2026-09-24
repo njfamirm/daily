@@ -1,8 +1,8 @@
-const BASE_TITLE = "daily";
+const BASE_TITLE = "TaskDrop";
 
 let audioCtx: AudioContext | null = null;
 
-/** بوق کوتاه دو نتی؛ بدون فایل صوتی تا آفلاین هم کار کند. */
+/** Short synthetic 2-tone chime using Web Audio API (offline-ready, zero asset dependency) */
 export function beep(times = 2) {
   try {
     audioCtx ??= new AudioContext();
@@ -23,11 +23,11 @@ export function beep(times = 2) {
       osc.stop(t0 + 0.3);
     }
   } catch {
-    /* صدا اختیاری است */
+    /* Audio output is optional */
   }
 }
 
-/** کلیک اول کاربر AudioContext را آزاد می‌کند تا بعداً بدون تعامل هم صدا بدهد. */
+/** Unlocks AudioContext on first user interaction so future alarms can play sound */
 export function unlockAudio() {
   try {
     audioCtx ??= new AudioContext();
@@ -45,7 +45,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 export function notify(title: string, body: string) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const n = new Notification(title, { body, tag: `daily-${title}`, requireInteraction: true });
+  const n = new Notification(title, { body, tag: `taskdrop-${title}`, requireInteraction: true });
   n.onclick = () => {
     window.focus();
     n.close();
@@ -66,7 +66,8 @@ function drawFavicon(count: number, flip: boolean) {
   g.strokeStyle = count > 0 && flip ? "#000000" : "#ffffff";
   g.lineWidth = 6;
   g.lineCap = "round";
-  // تیک
+
+  // Checkmark
   g.beginPath();
   g.moveTo(16, 34);
   g.lineTo(28, 46);
@@ -96,13 +97,13 @@ function drawFavicon(count: number, flip: boolean) {
   link.href = c.toDataURL("image/png");
 }
 
-/** بج favicon + عنوان تب؛ وقتی چیزی سررسید شده چشمک می‌زند. */
+/** Updates tab title and animated favicon badge when tasks are overdue */
 export function setBadge(count: number) {
   if (faviconAnim !== null) {
     clearInterval(faviconAnim);
     faviconAnim = null;
   }
-  document.title = count > 0 ? `(${count}) ${BASE_TITLE} — یادت نره!` : BASE_TITLE;
+  document.title = count > 0 ? `(${count}) ${BASE_TITLE}` : BASE_TITLE;
   drawFavicon(count, false);
   if (count > 0) {
     let flip = false;

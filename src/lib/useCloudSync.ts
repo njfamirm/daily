@@ -28,7 +28,7 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
   const onApplyRemoteRef = useRef(onApplyRemote);
   onApplyRemoteRef.current = onApplyRemote;
 
-  // ۱. متد دریافت و ادغام نسخه ریموت از طریق HTTP (به عنوان فال‌بک یا در لحظه اتصال)
+  // 1. Pull and merge remote vault state via HTTP (fallback or initial load)
   const syncPull = async () => {
     const config = loadSyncConfig();
     if (!config.serverUrl || !config.vaultId || !config.secretKey || isSyncingRef.current) {
@@ -56,7 +56,7 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
           lastPushedJsonRef.current = mergedStr;
           onApplyRemoteRef.current(merged);
 
-          // در صورت ایجاد تغییر بر اثر ادغام، نسخه مرج‌شده ذخیره می‌شود
+          // If merge generated local modifications, push merged state back to vault
           if (mergedStr !== remoteStr) {
             void pushToVault(
               config.serverUrl,
@@ -71,13 +71,13 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
         saveSyncConfig({ ...config, lastSyncedAt: remote.updatedAt, enabled: true });
       }
     } catch {
-      // سایلنت در پس‌زمینه
+      // Fail silently in background
     } finally {
       isSyncingRef.current = false;
     }
   };
 
-  // ۲. مدیریت کانکشن وب‌سوکت بلادرنگ (WebSocket Real-Time Connection)
+  // 2. Manage real-time WebSocket connection for instant synchronization
   useEffect(() => {
     let isMounted = true;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -104,8 +104,7 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
         wsRef.current = ws;
 
         ws.onopen = () => {
-          backoffMs = 1000; // ریست زمان تاخیر اتصال مجدد
-          // ارسال پیام درخواست وضعیت فعلی (init)
+          backoffMs = 1000;
           ws.send(JSON.stringify({ type: "init", vaultId: config.vaultId }));
         };
 
@@ -142,18 +141,17 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
               }
             }
           } catch {
-            // خطا در پردازش پیام وب‌سوکت
+            // Error parsing message
           }
         };
 
         ws.onerror = () => {
-          // در صورت بروز خطا وب‌سوکت بسته خواهد شد و onclose فعال می‌شود
+          // Handled by onclose
         };
 
         ws.onclose = () => {
           wsRef.current = null;
           if (isMounted) {
-            // تلاش مجدد با تصاعد زمانی (حداکثر ۱۵ ثانیه)
             reconnectTimer = setTimeout(() => {
               backoffMs = Math.min(backoffMs * 1.5, 15000);
               connectWs();
@@ -161,26 +159,25 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
           }
         };
       } catch {
-        // فال‌بک
+        // Fallback
       }
     };
 
     connectWs();
 
-    // پینگ سبک هر ۴۵ ثانیه جهت زنده نگه داشتن کانکشن در شبکه
+    // Heartbeat ping every 45s to keep connection alive
     pingInterval = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "ping" }));
       }
     }, 45000);
 
-    // مدیریت رویدادهای بازگشت به تب مرورگر و آنلاین شدن
+    // Re-verify version when tab gains focus or device goes online
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
           connectWs();
         } else {
-          // بررسی سریع نسخه در صورت فعال بودن
           const config = loadSyncConfig();
           if (config.serverUrl && config.vaultId) {
             void checkVaultVersion(config.serverUrl, config.vaultId, config.authToken).then(
@@ -216,7 +213,7 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
     };
   }, []);
 
-  // ۳. ارسال آنی تغییرات محلی به سرور (WebSocket Push با دیبانس ۱ ثانیه‌ای برای آرامش حین تایپ)
+  // 3. Debounced local push to server (1s debounce)
   useEffect(() => {
     const config = loadSyncConfig();
     if (!config.serverUrl || !config.vaultId || !config.secretKey) {
@@ -240,7 +237,6 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
         const now = Date.now();
         const cipher = await encryptData(currentJson, config.secretKey);
 
-        // اگر وب‌سوکت باز است، با وب‌سوکت ارسال می‌شود (بسیار سریع و سبک)
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(
             JSON.stringify({
@@ -255,7 +251,6 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
           lastRemoteUpdatedRef.current = now;
           saveSyncConfig({ ...config, lastSyncedAt: now, enabled: true });
         } else {
-          // در غیر این صورت از فال‌بک HTTP استفاده می‌شود
           const res = await pushToVault(
             config.serverUrl,
             config.vaultId,
@@ -268,7 +263,7 @@ export function useAutoCloudSync({ db, onApplyRemote }: AutoSyncOptions) {
           saveSyncConfig({ ...config, lastSyncedAt: res.updatedAt, enabled: true });
         }
       } catch {
-        // خطا در پس‌زمینه
+        // Fail silently
       } finally {
         isSyncingRef.current = false;
       }

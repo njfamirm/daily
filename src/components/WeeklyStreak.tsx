@@ -1,10 +1,12 @@
-import type { Task } from "@/lib/types.ts";
+import { getTranslation } from "@/lib/i18n.ts";
+import type { Language, Task } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import { CheckCircle2, Flame } from "lucide-react";
 import { useMemo } from "react";
 
 interface Props {
   tasks: Task[];
+  lang?: Language;
 }
 
 interface DayStats {
@@ -15,24 +17,27 @@ interface DayStats {
   isToday: boolean;
 }
 
-export function WeeklyStreak({ tasks }: Props) {
+export function WeeklyStreak({ tasks, lang = "fa" }: Props) {
+  const t = getTranslation(lang);
+  const isFa = lang === "fa";
+
   const { days, streak, todayCompleted, todayTotal, todayPercent } = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // محاسبه ۷ روز گذشته
+    // Calculate last 7 days stats
     const dayStats: DayStats[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(startOfToday.getTime() - i * 864e5);
       const nextD = new Date(d.getTime() + 864e5);
 
-      const dayTasks = tasks.filter((t) => {
-        if (!t.doneAt) return false;
-        const doneTime = new Date(t.doneAt).getTime();
+      const dayTasks = tasks.filter((task) => {
+        if (!task.doneAt) return false;
+        const doneTime = new Date(task.doneAt).getTime();
         return doneTime >= d.getTime() && doneTime < nextD.getTime();
       });
 
-      const dayName = d.toLocaleDateString("fa-IR", { weekday: "narrow" });
+      const dayName = d.toLocaleDateString(isFa ? "fa-IR" : "en-US", { weekday: "narrow" });
       dayStats.push({
         date: d,
         label: dayName,
@@ -42,26 +47,24 @@ export function WeeklyStreak({ tasks }: Props) {
       });
     }
 
-    // محاسبه استریک (روزهای متوالی اخیر با حداقل یک تسک انجام‌شده)
+    // Calculate consecutive streak
     let currentStreak = 0;
-    // بررسی از امروز یا دیروز
     const checkDays = [...dayStats].reverse();
     for (const d of checkDays) {
       if (d.count > 0) {
         currentStreak++;
       } else if (d.isToday) {
-        // اگر امروز هنوز چیزی انجام نداده باشد، استریک قبلی باطل نمی‌شود مگر اینکه روز تمام شود
         continue;
       } else {
         break;
       }
     }
 
-    // آمار کارهای امروز
-    const todayOpen = tasks.filter((t) => {
-      if (t.done) return false;
-      if (!t.due) return false;
-      const dueTime = new Date(t.due).getTime();
+    // Today's task numbers
+    const todayOpen = tasks.filter((task) => {
+      if (task.done) return false;
+      if (!task.due) return false;
+      const dueTime = new Date(task.due).getTime();
       const endOfToday = new Date(startOfToday.getTime() + 864e5 - 1).getTime();
       return dueTime <= endOfToday;
     }).length;
@@ -77,30 +80,27 @@ export function WeeklyStreak({ tasks }: Props) {
       todayTotal: total,
       todayPercent: percent,
     };
-  }, [tasks]);
+  }, [tasks, isFa]);
 
   return (
     <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5 shadow-xs">
       <div className="flex items-center justify-between gap-3">
-        {/* استریک و آمار */}
+        {/* Streak and Summary */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 rounded-lg bg-orange-950/60 border border-orange-800/60 px-2.5 py-1 text-xs font-semibold text-orange-300">
             <Flame className="size-3.5 text-orange-400 fill-orange-400/20" />
-            <span>{streak} روز پیوستگی</span>
+            <span>{t.streakDays(streak)}</span>
           </div>
 
           {todayTotal > 0 && (
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-400">
               <CheckCircle2 className="size-3.5 text-emerald-400" />
-              <span>
-                امروز: <strong className="text-zinc-100">{todayCompleted}</strong> از {todayTotal}{" "}
-                کار ({todayPercent}٪)
-              </span>
+              <span>{t.todayStats(todayCompleted, todayTotal, todayPercent)}</span>
             </div>
           )}
         </div>
 
-        {/* گرید ۷ روزه فعالیت */}
+        {/* 7-Day Activity Grid */}
         <div className="flex items-center gap-1.5">
           {days.map((d) => {
             const hasActivity = d.count > 0;
@@ -108,7 +108,7 @@ export function WeeklyStreak({ tasks }: Props) {
               <div
                 key={d.date.toISOString()}
                 className="flex flex-col items-center gap-1"
-                title={`${d.label}: ${d.count} تسک انجام شده`}
+                title={t.dayTasksTooltip(d.label, d.count)}
               >
                 <span
                   className={cn(
@@ -138,7 +138,7 @@ export function WeeklyStreak({ tasks }: Props) {
         </div>
       </div>
 
-      {/* نوار پیشرفت امروز */}
+      {/* Today's completion progress bar */}
       {todayTotal > 0 && (
         <div className="mt-3">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800/80">

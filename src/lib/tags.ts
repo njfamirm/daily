@@ -32,11 +32,23 @@ const PRESET_TAG_STYLES: Record<string, TagStyle> = {
     border: "border-rose-800/70",
     dot: "bg-rose-400",
   },
+  work: {
+    bg: "bg-sky-950/60",
+    text: "text-sky-300",
+    border: "border-sky-800/70",
+    dot: "bg-sky-400",
+  },
   کار: {
     bg: "bg-sky-950/60",
     text: "text-sky-300",
     border: "border-sky-800/70",
     dot: "bg-sky-400",
+  },
+  project: {
+    bg: "bg-blue-950/60",
+    text: "text-blue-300",
+    border: "border-blue-800/70",
+    dot: "bg-blue-400",
   },
   پروژه: {
     bg: "bg-blue-950/60",
@@ -44,13 +56,31 @@ const PRESET_TAG_STYLES: Record<string, TagStyle> = {
     border: "border-blue-800/70",
     dot: "bg-blue-400",
   },
+  personal: {
+    bg: "bg-purple-950/60",
+    text: "text-purple-300",
+    border: "border-purple-800/70",
+    dot: "bg-purple-400",
+  },
   شخصی: {
     bg: "bg-purple-950/60",
     text: "text-purple-300",
     border: "border-purple-800/70",
     dot: "bg-purple-400",
   },
+  shopping: {
+    bg: "bg-emerald-950/60",
+    text: "text-emerald-300",
+    border: "border-emerald-800/70",
+    dot: "bg-emerald-400",
+  },
   خرید: {
+    bg: "bg-emerald-950/60",
+    text: "text-emerald-300",
+    border: "border-emerald-800/70",
+    dot: "bg-emerald-400",
+  },
+  finance: {
     bg: "bg-emerald-950/60",
     text: "text-emerald-300",
     border: "border-emerald-800/70",
@@ -62,11 +92,23 @@ const PRESET_TAG_STYLES: Record<string, TagStyle> = {
     border: "border-emerald-800/70",
     dot: "bg-emerald-400",
   },
+  idea: {
+    bg: "bg-amber-950/60",
+    text: "text-amber-300",
+    border: "border-amber-800/70",
+    dot: "bg-amber-400",
+  },
   ایده: {
     bg: "bg-amber-950/60",
     text: "text-amber-300",
     border: "border-amber-800/70",
     dot: "bg-amber-400",
+  },
+  reading: {
+    bg: "bg-teal-950/60",
+    text: "text-teal-300",
+    border: "border-teal-800/70",
+    dot: "bg-teal-400",
   },
   مطالعه: {
     bg: "bg-teal-950/60",
@@ -74,11 +116,11 @@ const PRESET_TAG_STYLES: Record<string, TagStyle> = {
     border: "border-teal-800/70",
     dot: "bg-teal-400",
   },
-  یادگیری: {
-    bg: "bg-cyan-950/60",
-    text: "text-cyan-300",
-    border: "border-cyan-800/70",
-    dot: "bg-cyan-400",
+  meeting: {
+    bg: "bg-indigo-950/60",
+    text: "text-indigo-300",
+    border: "border-indigo-800/70",
+    dot: "bg-indigo-400",
   },
   جلسه: {
     bg: "bg-indigo-950/60",
@@ -86,11 +128,17 @@ const PRESET_TAG_STYLES: Record<string, TagStyle> = {
     border: "border-indigo-800/70",
     dot: "bg-indigo-400",
   },
-  سلامتی: {
+  health: {
     bg: "bg-green-950/60",
     text: "text-green-300",
     border: "border-green-800/70",
     dot: "bg-green-400",
+  },
+  fitness: {
+    bg: "bg-orange-950/60",
+    text: "text-orange-300",
+    border: "border-orange-800/70",
+    dot: "bg-orange-400",
   },
   ورزش: {
     bg: "bg-orange-950/60",
@@ -162,29 +210,29 @@ export const PRIORITY_CONFIG: Record<
   { label: string; border: string; badgeBg: string; badgeText: string; iconColor: string }
 > = {
   high: {
-    label: "اولویت بالا",
-    border: "border-r-4 border-r-red-500",
+    label: "High Priority",
+    border: "border-s-4 border-s-red-500",
     badgeBg: "bg-red-950/80 border-red-800/70",
     badgeText: "text-red-300",
     iconColor: "text-red-400",
   },
   medium: {
-    label: "اولویت متوسط",
-    border: "border-r-4 border-r-amber-500",
+    label: "Medium Priority",
+    border: "border-s-4 border-s-amber-500",
     badgeBg: "bg-amber-950/80 border-amber-800/70",
     badgeText: "text-amber-300",
     iconColor: "text-amber-400",
   },
   low: {
-    label: "اولویت پایین",
-    border: "border-r-4 border-r-blue-500/60",
+    label: "Low Priority",
+    border: "border-s-4 border-s-blue-500/60",
     badgeBg: "bg-blue-950/80 border-blue-800/70",
     badgeText: "text-blue-300",
     iconColor: "text-blue-400",
   },
   none: {
     label: "",
-    border: "border-r-4 border-r-transparent",
+    border: "border-s-4 border-s-transparent",
     badgeBg: "",
     badgeText: "",
     iconColor: "",

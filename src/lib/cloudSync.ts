@@ -13,9 +13,7 @@ export interface SyncConfig {
 
 const STORAGE_KEY = "taskdrop_cloud_sync_config";
 
-/**
- * تعیین آدرس سرور معتبر؛ در صورت خالی بودن، اگر روی کلودفلر باشد به صورت خودکار از دامنه جاری استفاده می‌کند
- */
+/** Resolves active relay server URL with sensible default fallback */
 export function resolveEffectiveServerUrl(serverUrl?: string): string {
   if (serverUrl && serverUrl.trim()) return serverUrl.trim();
   if (typeof window !== "undefined" && window.location.origin) {
@@ -60,9 +58,7 @@ export function saveSyncConfig(cfg: SyncConfig) {
   } catch {}
 }
 
-/**
- * تبدیل آدرس سرور HTTP به آدرس WebSocket امن
- */
+/** Converts HTTP relay URL to secure WebSocket URL (ws:// or wss://) */
 export function getWebSocketUrl(serverUrl: string, vaultId: string, authToken?: string): string {
   const targetUrl = resolveEffectiveServerUrl(serverUrl);
   if (!targetUrl || !vaultId) return "";
@@ -74,9 +70,7 @@ export function getWebSocketUrl(serverUrl: string, vaultId: string, authToken?: 
   return `${wsProto}${hostAndPath}/ws/${encodeURIComponent(vaultId)}${query}`;
 }
 
-/**
- * تولید رشته فشرده برای جفت‌سازی سریع و تولید QR Code
- */
+/** Generates compact base64 pairing token for QR codes and fast device syncing */
 export function encodeSyncPairingToken(cfg: SyncConfig): string {
   const payload = {
     s: cfg.serverUrl || "",
@@ -87,9 +81,7 @@ export function encodeSyncPairingToken(cfg: SyncConfig): string {
   return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
 }
 
-/**
- * بازخوانی اطلاعات اتصال از روی توکن یا QR Code
- */
+/** Decodes configuration parameters from a pairing token */
 export function decodeSyncPairingToken(token: string): Partial<SyncConfig> {
   const json = decodeURIComponent(escape(atob(token.trim())));
   const data = JSON.parse(json);
@@ -110,9 +102,7 @@ function getAuthHeaders(authToken?: string): Record<string, string> {
   return headers;
 }
 
-/**
- * ارسال نسخه فعلی به سرور والت شخصی (Push)
- */
+/** Push encrypted snapshot to remote vault */
 export async function pushToVault(
   serverUrl: string,
   vaultId: string,
@@ -122,7 +112,7 @@ export async function pushToVault(
 ): Promise<{ ok: boolean; updatedAt: number }> {
   const targetUrl = resolveEffectiveServerUrl(serverUrl);
   if (!targetUrl || !vaultId || !secretKey) {
-    throw new Error("تنظیمات سرور یا کلید والت کامل نیست");
+    throw new Error("Server URL, Vault ID, or Secret Key is missing");
   }
 
   const cleanUrl = targetUrl.replace(/\/+$/, "");
@@ -141,21 +131,19 @@ export async function pushToVault(
   });
 
   if (res.status === 401) {
-    throw new Error("توکن امنیتی سرور نامعتبر است (401 Unauthorized)");
+    throw new Error("Invalid Server Auth Token (401 Unauthorized)");
   }
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`خطای سرور (${res.status}): ${text}`);
+    throw new Error(`Server Error (${res.status}): ${text}`);
   }
 
   const data = await res.json();
   return { ok: true, updatedAt: data.updatedAt ?? now };
 }
 
-/**
- * بررسی سریع و کم‌حجم آخرین نسخه سرور
- */
+/** Check remote vault updated timestamp without downloading entire body */
 export async function checkVaultVersion(
   serverUrl: string,
   vaultId: string,
@@ -176,9 +164,7 @@ export async function checkVaultVersion(
   return null;
 }
 
-/**
- * دریافت آخرین نسخه والت از سرور (Pull)
- */
+/** Pull and decrypt latest snapshot from remote vault */
 export async function pullFromVault(
   serverUrl: string,
   vaultId: string,
@@ -196,7 +182,7 @@ export async function pullFromVault(
   });
 
   if (res.status === 401) {
-    throw new Error("توکن امنیتی سرور نامعتبر است (401 Unauthorized)");
+    throw new Error("Invalid Server Auth Token (401 Unauthorized)");
   }
 
   if (res.status === 404) {
@@ -204,7 +190,7 @@ export async function pullFromVault(
   }
 
   if (!res.ok) {
-    throw new Error(`خطا در ارتباط با سرور (${res.status})`);
+    throw new Error(`Server communication error (${res.status})`);
   }
 
   const data = await res.json();
@@ -217,9 +203,7 @@ export async function pullFromVault(
   };
 }
 
-/**
- * همگام‌سازی دوطرفه خودکار (Pull -> Merge -> Push در صورت تغییر)
- */
+/** Two-way automatic vault synchronization */
 export async function syncVault(
   config: SyncConfig,
   currentDb: DB,
@@ -236,7 +220,6 @@ export async function syncVault(
   );
 
   if (!remote) {
-    // والت در سرور وجود نداشت، نسخه محلی آپلود می‌شود
     await pushToVault(
       config.serverUrl,
       config.vaultId,

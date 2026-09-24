@@ -1,34 +1,36 @@
+export type Language = "fa" | "en";
 export type Repeat = "none" | "daily" | "weekly" | "monthly";
 export type Priority = "none" | "low" | "medium" | "high";
 export type ThemeMode = "dark" | "light" | "auto";
 export type PrimaryColor = "yellow" | "emerald" | "violet" | "blue" | "rose" | "orange";
+export type SnoozePreset = "15m" | "1h" | "tomorrow" | "weekend";
 
 export interface Task {
-  /** شناسه یکتا */
+  /** Unique task identifier */
   id: string;
-  /** متن اصلی و کوتاه تعهد */
+  /** Primary short commitment title */
   title: string;
-  /** توضیحات تکمیلی و جزئیات (یا خلاصه انجام کار هنگام دان‌شدن) */
+  /** Optional secondary details, link, or completion summary */
   description?: string | null;
-  /** زمان یادآوری، ISO 8601 با تایم‌زون محلی؛ null یعنی بدون زمان */
+  /** Due ISO 8601 string in local timezone; null if no deadline */
   due: string | null;
-  /** تکرار خودکار بعد از انجام‌شدن/سررسید */
+  /** Recurring recurrence interval */
   repeat: Repeat;
-  /** درجه اولویت */
+  /** Priority level */
   priority: Priority;
   done: boolean;
   createdAt: string;
-  /** زمان آخرین ویرایش */
+  /** Last updated timestamp */
   updatedAt?: string;
   doneAt: string | null;
-  /** زمان حذف (Tombstone) برای جلوگیری از زنده شدن در سینک */
+  /** Deletion tombstone for conflict-free sync */
   deletedAt?: string | null;
-  /** آخرین باری که نوتیف داده شده (برای جلوگیری از تکرار نوتیف) */
+  /** Timestamp when notification was last dispatched */
   notifiedAt: string | null;
   tags: string[];
 }
 
-/** یادداشت ثابت که همیشه بالای صفحه دیده می‌شود */
+/** Pinned focus note that stays in sight at the top of the workspace */
 export interface Note {
   id: string;
   text: string;
@@ -38,24 +40,26 @@ export interface Note {
 }
 
 export interface Settings {
-  /** پخش صدا هنگام سررسید */
+  /** Play audible chime on due alarm */
   sound: boolean;
-  /** نوتیفیکیشن مرورگر */
+  /** Web / native system notifications */
   notifications: boolean;
-  /** فاصله بررسی سررسیدها بر حسب ثانیه */
+  /** Frequency in seconds to check for due reminders */
   checkIntervalSec: number;
-  /** چند دقیقه قبل از موعد هم یادآوری شود */
+  /** Lead warning time in minutes before deadline */
   leadMinutes: number;
-  /** تم دارک یا لایت */
+  /** Dark, light, or auto theme */
   theme: ThemeMode;
-  /** رنگ پرایمری انتخابی */
+  /** Primary accent color */
   primaryColor: PrimaryColor;
+  /** UI Language */
+  language?: Language;
 }
 
 export interface DB {
   version: 1;
   settings: Settings;
-  /** حافظه و دستورالعمل‌های پایدار برای هوش مصنوعی */
+  /** Persistent custom memory and directives for AI */
   aiMemory?: string;
   notes: Note[];
   tasks: Task[];
@@ -71,6 +75,7 @@ export const DEFAULT_DB: DB = {
     leadMinutes: 0,
     theme: "dark",
     primaryColor: "yellow",
+    language: "fa",
   },
   aiMemory: "",
   notes: [],

@@ -4,9 +4,7 @@ import type { Task } from "./types.ts";
 
 export const NOTIFICATION_CHANNEL_ID = "taskdrop_urgent_reminders";
 
-/**
- * تبدیل ID رشته‌ای تسک به عدد صحیح یکتا و معتبر برای سیستم نوتیفیکیشن اندروید
- */
+/** Converts a string taskId into a deterministic 32-bit positive integer for Android notification IDs */
 export function getNotificationIdForTask(taskId: string): number {
   let hash = 0;
   for (let i = 0; i < taskId.length; i++) {
@@ -17,9 +15,7 @@ export function getNotificationIdForTask(taskId: string): number {
   return Math.abs(hash) % 2147483647;
 }
 
-/**
- * آماده‌سازی کانال نوتیفیکیشن اختصاصی با بیشترین اولویت، صدا و نمایش کامل در صفحه قفل
- */
+/** Initialize native Android/iOS notification channel with high priority and lockscreen visibility */
 export async function initNotificationChannel(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
@@ -31,10 +27,10 @@ export async function initNotificationChannel(): Promise<void> {
 
     await LocalNotifications.createChannel({
       id: NOTIFICATION_CHANNEL_ID,
-      name: "یادآورهای فوری تسک‌دراپ",
-      description: "اعلان‌های زمان‌دار تسک‌ها همراه با پخش صدا، لرزش و نمایش در صفحه قفل",
+      name: "TaskDrop Reminders",
+      description: "Scheduled task alarms with sound, vibration, and lock-screen display",
       importance: 5, // IMPORTANCE_HIGH / MAX
-      visibility: 1, // VISIBILITY_PUBLIC (نمایش در لاک‌اسکرین)
+      visibility: 1, // VISIBILITY_PUBLIC (Lockscreen visible)
       sound: "beep.wav",
       vibration: true,
       lights: true,
@@ -45,9 +41,7 @@ export async function initNotificationChannel(): Promise<void> {
   }
 }
 
-/**
- * زمان‌بندی یادآور بومی برای یک تسک
- */
+/** Schedule a native alarm notification for a single task */
 export async function scheduleTaskNotification(task: Task): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   if (!task.due || task.done || task.deletedAt) {
@@ -58,24 +52,27 @@ export async function scheduleTaskNotification(task: Task): Promise<void> {
   const dueTime = new Date(task.due).getTime();
   const now = Date.now();
 
-  // اگر زمان موعد گذشته باشد نیازی به تنظیم آلارم نیست
   if (dueTime <= now) return;
 
   try {
     const notifId = getNotificationIdForTask(task.id);
     const priorityLabel =
-      task.priority === "high" ? "🚨 فوری | " : task.priority === "medium" ? "⚡ مهم | " : "";
-    const repeatLabel = task.repeat !== "none" ? ` (تکرار: ${task.repeat})` : "";
+      task.priority === "high"
+        ? "🚨 Urgent | "
+        : task.priority === "medium"
+          ? "⚡ Important | "
+          : "";
+    const repeatLabel = task.repeat !== "none" ? ` (Repeat: ${task.repeat})` : "";
 
     await LocalNotifications.schedule({
       notifications: [
         {
           id: notifId,
-          title: `${priorityLabel}تسک‌دراپ: موعد انجام کار`,
+          title: `${priorityLabel}TaskDrop`,
           body: `${task.title}${repeatLabel}`,
           schedule: {
             at: new Date(dueTime),
-            allowWhileIdle: true, // حتی در زمان Doze mode / قفل بودن صفحه
+            allowWhileIdle: true,
           },
           channelId: NOTIFICATION_CHANNEL_ID,
           sound: "beep.wav",
@@ -92,9 +89,7 @@ export async function scheduleTaskNotification(task: Task): Promise<void> {
   }
 }
 
-/**
- * لغو نوتیفیکیشن یک تسک (مثلاً هنگام انجام شدن یا حذف)
- */
+/** Cancel a native alarm notification for a task */
 export async function cancelTaskNotification(taskId: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
@@ -108,9 +103,7 @@ export async function cancelTaskNotification(taskId: string): Promise<void> {
   }
 }
 
-/**
- * همگام‌سازی کامل تمام تسک‌های فعال با سیستم نوتیفیکیشن دستگاه
- */
+/** Sync all active task deadlines with native system alarms */
 export async function syncAllTaskNotifications(tasks: Task[]): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 

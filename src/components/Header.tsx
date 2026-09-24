@@ -6,12 +6,13 @@ import { SyncModal } from "@/components/SyncModal.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
+import { getTranslation } from "@/lib/i18n.ts";
 import { requestNotificationPermission } from "@/lib/notify.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
-import { applyTheme, COLOR_PRESETS } from "@/lib/theme.ts";
+import { applyTheme, COLOR_PRESETS, getColorLabel } from "@/lib/theme.ts";
 import { hapticSelection, hapticSuccess } from "@/lib/haptics.ts";
-import type { DB, PrimaryColor, ThemeMode } from "@/lib/types.ts";
+import type { DB, Language, PrimaryColor, ThemeMode } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
   Bell,
@@ -24,6 +25,7 @@ import {
   Download,
   FileText,
   Flame,
+  Globe,
   HelpCircle,
   Laptop,
   Moon,
@@ -39,6 +41,7 @@ import { useEffect, useState } from "react";
 
 interface Props {
   db: DB;
+  lang: Language;
   dueCount: number;
   showInput: boolean;
   onToggleInput: () => void;
@@ -51,6 +54,7 @@ interface Props {
 
 export function Header({
   db,
+  lang,
   dueCount,
   showInput,
   onToggleInput,
@@ -60,6 +64,7 @@ export function Header({
   onClearDone,
   onMessage,
 }: Props) {
+  const t = getTranslation(lang);
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
@@ -73,12 +78,12 @@ export function Header({
   const currentPrimary: PrimaryColor = db.settings.primaryColor || "yellow";
   const activeColorObj = COLOR_PRESETS.find((c) => c.id === currentPrimary) || COLOR_PRESETS[0];
 
-  // اعمال تم و رنگ پرایمری به سند
+  // Apply theme and primary accent color to DOM
   useEffect(() => {
     void applyTheme(currentTheme, currentPrimary);
   }, [currentTheme, currentPrimary]);
 
-  // بستن منو با Escape
+  // Close menu on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && menuOpen) {
@@ -93,7 +98,14 @@ export function Header({
     void hapticSelection();
     onUpdateSetting("primaryColor", color);
     const colorObj = COLOR_PRESETS.find((c) => c.id === color);
-    onMessage(`رنگ ${colorObj?.label || color} انتخاب شد`);
+    const label = colorObj ? getColorLabel(colorObj, lang) : color;
+    onMessage(t.colorSelected(label));
+  };
+
+  const selectLanguage = (newLang: Language) => {
+    void hapticSelection();
+    onUpdateSetting("language", newLang);
+    onMessage(t.langChanged(newLang === "fa" ? "فارسی" : "English"));
   };
 
   const copy = async () => {
@@ -102,7 +114,7 @@ export function Header({
       await navigator.clipboard.writeText(text);
       setCopied(true);
       void hapticSuccess();
-      onMessage("کپی شد! پرامپت و دیتای تسک‌ها در کلیپ‌بورد قرار گرفت");
+      onMessage(t.copySuccess);
       setTimeout(() => setCopied(false), 1500);
     } catch {
       setFallback(text);
@@ -115,9 +127,9 @@ export function Header({
       onReplace(parseIncoming(text));
       setFallback(null);
       void hapticSuccess();
-      onMessage("دیتا با موفقیت از AI جایگزین شد", () => onReplace(before));
+      onMessage(t.pasteSuccess, () => onReplace(before));
     } catch (err) {
-      onMessage(`پیست نشد: ${err instanceof Error ? err.message : "ورودی نامعتبر"}`);
+      onMessage(t.pasteFailed(err instanceof Error ? err.message : "Invalid input"));
     }
   };
 
@@ -125,7 +137,7 @@ export function Header({
     try {
       const text = await navigator.clipboard.readText();
       if (!text.trim()) {
-        onMessage("کلیپ‌بورد خالی است");
+        onMessage(t.clipboardEmpty);
         return;
       }
       apply(text);
@@ -134,11 +146,11 @@ export function Header({
     }
   };
 
-  const hasDone = db.tasks.some((t) => t.done);
+  const hasDone = db.tasks.some((task) => task.done);
 
   return (
     <header className="relative flex items-center justify-between gap-3 border-b border-zinc-800/80 pb-3.5">
-      {/* لوگوی اختصاصی و نشانگر سررسید */}
+      {/* Brand logo and due badge */}
       <div className="flex items-center gap-2.5">
         <div
           className="grid size-9 shrink-0 place-items-center rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-inner overflow-hidden"
@@ -173,19 +185,19 @@ export function Header({
 
         {dueCount > 0 && (
           <span className="rounded-full border border-red-500/40 bg-red-500/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
-            {dueCount} سررسید
+            {t.dueBadge(dueCount)}
           </span>
         )}
       </div>
 
-      {/* دکمه‌های اصلی هدر */}
+      {/* Primary header actions */}
       <div className="flex items-center gap-2">
-        {/* دکمه برجسته کپی برای AI */}
+        {/* Copy for AI Button */}
         <Button
           variant="outline"
           size="sm"
           onClick={copy}
-          title="کپی برای هوش مصنوعی"
+          title={t.copyTitle}
           className="gap-1.5 border-zinc-700/90 bg-zinc-900/90 text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800 font-medium text-xs px-3"
         >
           {copied ? (
@@ -193,27 +205,27 @@ export function Header({
           ) : (
             <ClipboardCopy className="size-3.5 text-zinc-300" />
           )}
-          <span>{copied ? "کپی شد" : "کپی"}</span>
+          <span>{copied ? t.copied : t.copy}</span>
         </Button>
 
-        {/* دکمه برجسته پیست از AI */}
+        {/* Paste from AI Button */}
         <Button
           variant="outline"
           size="sm"
           onClick={paste}
-          title="جایگزینی سریع دیتای ویرایش شده با خروجی هوش مصنوعی"
+          title={t.pasteTitle}
           className="gap-1.5 border-zinc-700/90 bg-zinc-900/90 text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800 font-medium text-xs px-3"
         >
           <ClipboardPaste className="size-3.5 text-zinc-300" />
-          <span>پیست</span>
+          <span>{t.paste}</span>
         </Button>
 
-        {/* دکمه مخفی/نمایش باکس ورود تسک دستی */}
+        {/* Toggle quick add input */}
         <Button
           variant="ghost"
           size="icon"
-          aria-label={showInput ? "مخفی‌کردن باکس ورودی" : "نمایش باکس ورودی دستی"}
-          title={showInput ? "مخفی‌کردن باکس ورودی دستی" : "نمایش باکس ورودی دستی"}
+          aria-label={showInput ? t.toggleInputHide : t.toggleInputShow}
+          title={showInput ? t.toggleInputHide : t.toggleInputShow}
           onClick={onToggleInput}
           className={cn(
             "transition-colors",
@@ -223,13 +235,13 @@ export function Header({
           <Plus className={cn("size-4 transition-transform", showInput && "rotate-45")} />
         </Button>
 
-        {/* منوی سه نقطه برای همه امکانات دیگر */}
+        {/* Options & Settings Dropdown */}
         <div className="relative">
           <Button
             variant="ghost"
             size="icon"
-            aria-label="منوی گزینه‌ها"
-            title="امکانات و تنظیمات بیشتر"
+            aria-label={t.moreOptions}
+            title={t.moreOptions}
             onClick={() => setMenuOpen((prev) => !prev)}
             className={cn(
               "text-zinc-400 hover:text-zinc-100",
@@ -242,13 +254,51 @@ export function Header({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute end-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 p-2 text-xs shadow-2xl backdrop-blur-md">
-                {/* سوییچ سه‌حالته تم: تاریک / روشن / خودکار */}
+              <div className="absolute end-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 p-2 text-xs shadow-2xl backdrop-blur-md">
+                {/* Language Switcher */}
+                <div className="mb-2 px-2 py-1">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-zinc-400">
+                    <span className="flex items-center gap-1.5">
+                      <Globe className="size-3.5 text-sky-400" />
+                      {t.language}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 rounded-xl bg-zinc-900/80 p-1 border border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => selectLanguage("fa")}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                        lang === "fa"
+                          ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <span>فارسی</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectLanguage("en")}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                        lang === "en"
+                          ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <span>English</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="my-1 border-t border-zinc-800/80" />
+
+                {/* Theme Mode Switcher */}
                 <div className="mb-2 px-2 py-1">
                   <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-zinc-400">
                     <span className="flex items-center gap-1.5">
                       <Sun className="size-3.5 text-amber-400" />
-                      حالت تم
+                      {t.themeMode}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-900/80 p-1 border border-zinc-800">
@@ -256,7 +306,7 @@ export function Header({
                       type="button"
                       onClick={() => {
                         onUpdateSetting("theme", "dark");
-                        onMessage("تم تاریک فعال شد");
+                        onMessage(t.themeDarkActive);
                       }}
                       className={cn(
                         "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
@@ -266,13 +316,13 @@ export function Header({
                       )}
                     >
                       <Moon className="size-3 text-sky-400" />
-                      <span>تاریک</span>
+                      <span>{t.themeDark}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         onUpdateSetting("theme", "light");
-                        onMessage("تم روشن فعال شد");
+                        onMessage(t.themeLightActive);
                       }}
                       className={cn(
                         "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
@@ -282,13 +332,13 @@ export function Header({
                       )}
                     >
                       <Sun className="size-3 text-amber-400" />
-                      <span>روشن</span>
+                      <span>{t.themeLight}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         onUpdateSetting("theme", "auto");
-                        onMessage("تم خودکار سیستم فعال شد");
+                        onMessage(t.themeAutoActive);
                       }}
                       className={cn(
                         "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
@@ -298,31 +348,34 @@ export function Header({
                       )}
                     >
                       <Laptop className="size-3 text-emerald-400" />
-                      <span>خودکار</span>
+                      <span>{t.themeAuto}</span>
                     </button>
                   </div>
                 </div>
 
                 <div className="my-1 border-t border-zinc-800/80" />
 
-                {/* انتخاب پالت رنگ پرایمری */}
+                {/* Accent Color Palette Selection */}
                 <div className="mb-2 px-2 py-1">
                   <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-zinc-400">
                     <span className="flex items-center gap-1.5">
                       <Palette className="size-3.5 text-amber-400" />
-                      رنگ تم اصلی
+                      {t.accentColor}
                     </span>
-                    <span className="text-[10px] text-zinc-500">{activeColorObj.label}</span>
+                    <span className="text-[10px] text-zinc-500">
+                      {getColorLabel(activeColorObj, lang)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-1">
                     {COLOR_PRESETS.map((preset) => {
                       const isSelected = currentPrimary === preset.id;
+                      const presetLabel = getColorLabel(preset, lang);
                       return (
                         <button
                           key={preset.id}
                           type="button"
                           onClick={() => selectPrimaryColor(preset.id)}
-                          title={preset.label}
+                          title={presetLabel}
                           className={cn(
                             "relative size-6 rounded-full transition-transform hover:scale-110 cursor-pointer",
                             preset.dotClass,
@@ -343,10 +396,10 @@ export function Header({
                     setMenuOpen(false);
                     setMemoryOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <Brain className="size-4 text-violet-400" />
-                  <span className="flex-1 text-start">حافظه هوش مصنوعی</span>
+                  <span className="flex-1 text-start">{t.aiMemory}</span>
                   {db.aiMemory?.trim() && (
                     <span className="size-1.5 rounded-full bg-violet-400 animate-pulse" />
                   )}
@@ -358,10 +411,10 @@ export function Header({
                     setMenuOpen(false);
                     setDigestOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <FileText className="size-4 text-emerald-400" />
-                  <span className="flex-1 text-start">گزارش روزانه</span>
+                  <span className="flex-1 text-start">{t.dailyDigest}</span>
                 </button>
 
                 <button
@@ -370,10 +423,10 @@ export function Header({
                     setMenuOpen(false);
                     setStreakOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <Flame className="size-4 text-orange-400" />
-                  <span className="flex-1 text-start">آمار و پیوستگی ۷ روزه</span>
+                  <span className="flex-1 text-start">{t.weeklyStreak}</span>
                 </button>
 
                 <button
@@ -382,10 +435,10 @@ export function Header({
                     setMenuOpen(false);
                     setSyncOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <Cloud className="size-4 text-sky-400" />
-                  <span className="flex-1 text-start">همگام‌سازی ابری (E2EE)</span>
+                  <span className="flex-1 text-start">{t.cloudSync}</span>
                 </button>
 
                 <div className="my-1 border-t border-zinc-800/80" />
@@ -396,9 +449,9 @@ export function Header({
                     const next = !db.settings.notifications;
                     onUpdateSetting("notifications", next);
                     if (next) void requestNotificationPermission();
-                    onMessage(next ? "نوتیفیکیشن فعال شد" : "نوتیفیکیشن غیرفعال شد");
+                    onMessage(next ? t.notifEnabled : t.notifDisabled);
                   }}
-                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     {db.settings.notifications ? (
@@ -406,7 +459,7 @@ export function Header({
                     ) : (
                       <BellOff className="size-4 text-zinc-500" />
                     )}
-                    <span>نوتیفیکیشن مرورگر</span>
+                    <span>{t.notifications}</span>
                   </div>
                   <span
                     className={cn(
@@ -416,7 +469,7 @@ export function Header({
                         : "bg-zinc-900 text-zinc-500",
                     )}
                   >
-                    {db.settings.notifications ? "روشن" : "خاموش"}
+                    {db.settings.notifications ? t.notifOn : t.notifOff}
                   </span>
                 </button>
 
@@ -425,9 +478,9 @@ export function Header({
                   onClick={() => {
                     const next = !db.settings.sound;
                     onUpdateSetting("sound", next);
-                    onMessage(next ? "صدای زنگ فعال شد" : "صدای زنگ خاموش شد");
+                    onMessage(next ? t.soundEnabled : t.soundDisabled);
                   }}
-                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     {db.settings.sound ? (
@@ -435,7 +488,7 @@ export function Header({
                     ) : (
                       <VolumeX className="size-4 text-zinc-500" />
                     )}
-                    <span>صدای زنگ هشدار</span>
+                    <span>{t.alarmSound}</span>
                   </div>
                   <span
                     className={cn(
@@ -445,7 +498,7 @@ export function Header({
                         : "bg-zinc-900 text-zinc-500",
                     )}
                   >
-                    {db.settings.sound ? "روشن" : "خاموش"}
+                    {db.settings.sound ? t.notifOn : t.notifOff}
                   </span>
                 </button>
 
@@ -457,11 +510,11 @@ export function Header({
                     setMenuOpen(false);
                     setHelpOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
                 >
                   <HelpCircle className="size-4 text-zinc-400" />
-                  <span className="flex-1 text-start">راهنما و کلیدهای میانبر</span>
-                  <Kbd size="xs">؟</Kbd>
+                  <span className="flex-1 text-start">{t.helpAndShortcuts}</span>
+                  <Kbd size="xs">?</Kbd>
                 </button>
 
                 <a
@@ -471,9 +524,9 @@ export function Header({
                   className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-amber-300 hover:bg-amber-950/40 hover:text-amber-200 transition-colors"
                 >
                   <Download className="size-4 text-amber-400" />
-                  <span className="flex-1 text-start font-medium">دانلود نسخه اندروید (APK)</span>
+                  <span className="flex-1 text-start font-medium">{t.downloadAndroid}</span>
                   <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
-                    جدید
+                    {t.badgeNew}
                   </span>
                 </a>
 
@@ -484,10 +537,10 @@ export function Header({
                       setMenuOpen(false);
                       onClearDone();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors cursor-pointer"
                   >
                     <Trash2 className="size-4 text-red-400" />
-                    <span className="flex-1 text-start">پاک‌سازی انجام‌شده‌ها</span>
+                    <span className="flex-1 text-start">{t.clearDone}</span>
                   </button>
                 )}
               </div>
@@ -496,13 +549,14 @@ export function Header({
         </div>
       </div>
 
-      {/* مدال‌ها و دیالوگ‌ها */}
+      {/* Modals & Sheets */}
       <AIMemorySheet
         open={memoryOpen}
         memory={db.aiMemory || ""}
+        lang={lang}
         onSave={(mem) => {
           onUpdateMemory(mem);
-          onMessage("حافظه هوش مصنوعی به‌روزرسانی شد");
+          onMessage(t.aiMemoryUpdated);
         }}
         onClose={() => setMemoryOpen(false)}
       />
@@ -510,41 +564,48 @@ export function Header({
       <DailyDigestModal
         open={digestOpen}
         db={db}
+        lang={lang}
         onClose={() => setDigestOpen(false)}
         onMessage={onMessage}
       />
 
-      <StreakModal open={streakOpen} tasks={db.tasks} onClose={() => setStreakOpen(false)} />
+      <StreakModal
+        open={streakOpen}
+        tasks={db.tasks}
+        lang={lang}
+        onClose={() => setStreakOpen(false)}
+      />
 
       <SyncModal
         open={syncOpen}
         db={db}
+        lang={lang}
         onSyncApply={onReplace}
         onClose={() => setSyncOpen(false)}
         onMessage={onMessage}
       />
 
-      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpSheet open={helpOpen} lang={lang} onClose={() => setHelpOpen(false)} />
 
-      {/* فال‌بک پیست در صورت عدم دسترسی به کلیپ‌بورد */}
+      {/* Fallback Paste Modal */}
       {fallback !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xs">
           <div
             className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-3 text-sm font-semibold text-zinc-100">پیست خروجی هوش مصنوعی</h3>
+            <h3 className="mb-3 text-sm font-semibold text-zinc-100">{t.pasteFallbackTitle}</h3>
             <Textarea
               autoFocus
               rows={8}
               defaultValue={fallback}
-              placeholder="خروجی هوش مصنوعی را اینجا پیست کنید…"
+              placeholder={t.pasteFallbackPlaceholder}
               className="font-mono text-xs mb-3"
               id="sync-fallback-modal"
             />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setFallback(null)}>
-                انصراف
+                {t.cancel}
               </Button>
               <Button
                 size="sm"
@@ -555,7 +616,7 @@ export function Header({
                   )
                 }
               >
-                اعمال کن
+                {t.apply}
               </Button>
             </div>
           </div>
