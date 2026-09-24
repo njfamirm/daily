@@ -138,18 +138,33 @@ export function Header({
       {/* لوگوی اختصاصی و نشانگر سررسید */}
       <div className="flex items-center gap-2.5">
         <div
-          className="grid size-9 shrink-0 place-items-center rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-inner"
+          className="grid size-9 shrink-0 place-items-center rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-inner overflow-hidden"
           title="daily"
         >
-          <svg viewBox="0 0 100 100" className="size-5.5">
+          <svg viewBox="0 0 100 100" className="size-9">
+            <defs>
+              <pattern
+                id="header-dots"
+                x="0"
+                y="0"
+                width="16"
+                height="16"
+                patternUnits="userSpaceOnUse"
+              >
+                <circle cx="8" cy="8" r="0.8" fill="#71717a" fillOpacity="0.4" />
+              </pattern>
+            </defs>
+            <rect width="100" height="100" rx="22" fill="#141417" />
+            <rect width="100" height="100" rx="22" fill="url(#header-dots)" />
             <path
-              d="M28 52 L44 68 L74 34"
+              d="M 34 52 L 46 64 L 68 38"
               fill="none"
               stroke="#ffffff"
-              strokeWidth="10"
+              strokeWidth="8.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+            <circle cx="46" cy="64" r="2.2" fill={activeColorObj.bgHex} />
           </svg>
         </div>
 
