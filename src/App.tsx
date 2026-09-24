@@ -431,7 +431,7 @@ export function App() {
   const openCount = db.tasks.filter((t) => !t.done && !t.deletedAt).length;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 py-6 sm:py-10">
+    <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:py-10">
       <Header
         db={db}
         dueCount={due}
@@ -571,7 +571,7 @@ export function App() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
+        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
           <span>{toast.text}</span>
           {toast.undo && (
             <button
