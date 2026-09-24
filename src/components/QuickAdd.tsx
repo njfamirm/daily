@@ -19,9 +19,10 @@ export function QuickAdd({ onAdd }: Props) {
     <div className="relative">
       <Input
         ref={ref}
+        id="quick-add-input"
         autoFocus
         value={value}
-        placeholder="چی یادت نره؟  مثلاً: دوشنبه هفته بعد ساعت ۱۰ کوک کنم"
+        placeholder="چی یادت نره؟  مثلاً: فردا ساعت ۱۰ پیگیری پروژه #کار"
         onChange={(e) => setValue(e.target.value)}
         onFocus={unlockAudio}
         onKeyDown={(e) => {
@@ -29,26 +30,37 @@ export function QuickAdd({ onAdd }: Props) {
             onAdd(value);
             setValue("");
           }
-          if (e.key === "Escape") setValue("");
+          if (e.key === "Escape") {
+            setValue("");
+            ref.current?.blur();
+          }
         }}
-        className="h-14 rounded-xl border-neutral-800 bg-neutral-900/60 pe-12 ps-4 text-base"
+        className="h-14 rounded-xl border-zinc-700/80 bg-zinc-900/90 pe-14 ps-4 text-base font-normal shadow-sm placeholder:text-zinc-500 focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300"
       />
-      <CornerDownLeft className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 text-neutral-600" />
+      <div className="pointer-events-none absolute end-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        <kbd className="hidden rounded border border-zinc-700 bg-zinc-800/90 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 sm:inline-block">
+          /
+        </kbd>
+        <CornerDownLeft className="size-4 text-zinc-400" />
+      </div>
       {preview && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs text-neutral-500">
-          <span className="text-neutral-300">{preview.title || "…"}</span>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 px-1 text-xs">
+          <span className="font-medium text-zinc-200">{preview.title || "…"}</span>
           {preview.due && (
-            <span className="rounded-md bg-white px-2 py-0.5 font-medium text-black">
+            <span className="rounded-md bg-white px-2.5 py-0.5 font-medium text-black shadow-xs">
               {formatDue(preview.due.toISOString())}
             </span>
           )}
           {preview.repeat !== "none" && (
-            <span className="rounded-md border border-neutral-700 px-2 py-0.5">
+            <span className="rounded-md border border-zinc-700 bg-zinc-800/80 px-2 py-0.5 text-zinc-300">
               {{ daily: "هر روز", weekly: "هر هفته", monthly: "هر ماه" }[preview.repeat]}
             </span>
           )}
           {preview.tags.map((t) => (
-            <span key={t} className="rounded-md border border-neutral-700 px-2 py-0.5">
+            <span
+              key={t}
+              className="rounded-md border border-zinc-700/80 bg-zinc-800/60 px-2 py-0.5 text-zinc-300"
+            >
               #{t}
             </span>
           ))}

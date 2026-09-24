@@ -1,3 +1,4 @@
+import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { SyncBar } from "@/components/SyncBar.tsx";
@@ -8,7 +9,7 @@ import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
-import { Bell, BellOff, Volume2, VolumeX } from "lucide-react";
+import { Bell, BellOff, HelpCircle, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string {
@@ -27,6 +28,7 @@ export function App() {
   const { db, setDb, update } = useDB();
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const firedRef = useRef(false);
 
   const showToast = (text: string, undo?: () => void) => {
@@ -90,6 +92,74 @@ export function App() {
       window.removeEventListener("keydown", ask);
     };
   }, [db.settings.notifications]);
+
+  // کلیدهای میانبر سراسری کیبورد
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+      const isInputActive =
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // Undo: Ctrl+Z یا Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !isInputActive) {
+        if (toast?.undo) {
+          e.preventDefault();
+          toast.undo();
+          setToast(null);
+        }
+        return;
+      }
+
+      // Escape برای بستن مدال راهنما
+      if (e.key === "Escape") {
+        if (helpOpen) {
+          setHelpOpen(false);
+          return;
+        }
+      }
+
+      // هنگام تایپ داخل input یا textarea کلیدهای ناوبری فعال نشوند
+      if (isInputActive) return;
+
+      // فوکوس ثبت سریع: '/' یا 'n' یا 'N'
+      if (e.key === "/" || e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>("#quick-add-input");
+        input?.focus();
+        return;
+      }
+
+      // راهنما: '?' یا 'Shift+/'
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setHelpOpen((prev) => !prev);
+        return;
+      }
+
+      // قطع و وصل صدا: 's' یا 'S'
+      if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        setSetting("sound", !db.settings.sound);
+        showToast(!db.settings.sound ? "صدای زنگ فعال شد" : "صدای زنگ خاموش شد");
+        return;
+      }
+
+      // قطع و وصل نوتیفیکیشن: 'b' یا 'B'
+      if (e.key === "b" || e.key === "B") {
+        e.preventDefault();
+        const next = !db.settings.notifications;
+        setSetting("notifications", next);
+        if (next) void requestNotificationPermission();
+        showToast(next ? "نوتیفیکیشن فعال شد" : "نوتیفیکیشن غیرفعال شد");
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [db.settings.sound, db.settings.notifications, helpOpen, toast]);
 
   const addTask = (raw: string) => {
     const p = parseInput(raw);
@@ -157,37 +227,54 @@ export function App() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-5 px-4 py-8 sm:py-14">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold tracking-tight">daily</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white">daily</h1>
           {due > 0 && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-400">
+            <span className="rounded-full border border-red-500/40 bg-red-500/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
               {due} سررسیدشده
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="راهنما"
+            title="راهنما و کلیدهای میانبر (؟)"
+            onClick={() => setHelpOpen(true)}
+          >
+            <HelpCircle />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
             aria-label="صدا"
-            title={db.settings.sound ? "صدا روشن" : "صدا خاموش"}
+            title={db.settings.sound ? "صدا روشن (S)" : "صدا خاموش (S)"}
             onClick={() => setSetting("sound", !db.settings.sound)}
           >
-            {db.settings.sound ? <Volume2 /> : <VolumeX />}
+            {db.settings.sound ? (
+              <Volume2 className="text-zinc-200" />
+            ) : (
+              <VolumeX className="text-zinc-500" />
+            )}
           </Button>
           <Button
             variant="ghost"
             size="icon"
             aria-label="نوتیفیکیشن"
-            title={db.settings.notifications ? "نوتیف روشن" : "نوتیف خاموش"}
+            title={db.settings.notifications ? "نوتیف روشن (B)" : "نوتیف خاموش (B)"}
             onClick={() => {
               const next = !db.settings.notifications;
               setSetting("notifications", next);
               if (next) void requestNotificationPermission();
             }}
           >
-            {db.settings.notifications ? <Bell /> : <BellOff />}
+            {db.settings.notifications ? (
+              <Bell className="text-zinc-200" />
+            ) : (
+              <BellOff className="text-zinc-500" />
+            )}
           </Button>
         </div>
       </header>
@@ -214,36 +301,36 @@ export function App() {
         <Group title="بدون زمان" tasks={groups.someday} {...{ toggle, remove, rename }} />
         <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
         {db.tasks.length === 0 && (
-          <p className="pt-10 text-center text-sm text-neutral-600">
+          <p className="pt-10 text-center text-sm text-zinc-500">
             یه خط بنویس و Enter بزن. مثلاً «فردا ساعت ۹ چک کن آپدیت اومده».
           </p>
         )}
       </main>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-900 pt-4">
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/80 pt-4">
         <SyncBar db={db} onReplace={setDb} onMessage={showToast} />
-        <span className="text-[11px] text-neutral-700">
-          همه‌چیز فقط روی همین مرورگر ذخیره می‌شود.
-        </span>
+        <span className="text-xs text-zinc-400">همه‌چیز آفلاین روی مرورگر شما ذخیره می‌شود.</span>
       </footer>
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-2 text-sm shadow-xl">
+        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
           <span>{toast.text}</span>
           {toast.undo && (
             <button
               type="button"
-              className="font-medium text-neutral-400 underline underline-offset-2 hover:text-white"
+              className="font-semibold text-amber-400 underline underline-offset-2 hover:text-amber-300"
               onClick={() => {
                 toast.undo?.();
                 setToast(null);
               }}
             >
-              برگردان
+              برگردان (Ctrl+Z)
             </button>
           )}
         </div>
       )}
+
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }
@@ -266,11 +353,23 @@ function Group({
   if (tasks.length === 0) return null;
   return (
     <section>
-      <h2 className={cn("mb-1 px-3 text-xs font-medium text-neutral-500", alert && "text-red-400")}>
-        {title}
-        <span className="ms-2 text-neutral-700">{tasks.length}</span>
+      <h2
+        className={cn(
+          "mb-2 flex items-center justify-between px-2 text-xs font-semibold text-zinc-400",
+          alert && "text-red-400 font-bold",
+        )}
+      >
+        <span>{title}</span>
+        <span
+          className={cn(
+            "rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] font-mono text-zinc-300",
+            alert && "border border-red-800/50 bg-red-950/80 text-red-300",
+          )}
+        >
+          {tasks.length}
+        </span>
       </h2>
-      <div className="space-y-0.5">
+      <div className="space-y-1.5">
         {tasks.map((t) => (
           <TaskItem key={t.id} task={t} onToggle={toggle} onDelete={remove} onRename={rename} />
         ))}

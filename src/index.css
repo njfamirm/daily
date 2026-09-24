@@ -4,11 +4,11 @@
 
 @theme {
   --font-sans: "Vazirmatn", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --color-bg: oklch(0.145 0 0);
-  --color-fg: oklch(0.985 0 0);
-  --color-muted: oklch(0.63 0 0);
-  --color-line: oklch(0.27 0 0);
-  --color-card: oklch(0.18 0 0);
+  --color-bg: #09090b;
+  --color-fg: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-line: #27272a;
+  --color-card: #141417;
   --radius-xl2: 0.9rem;
 }
 
