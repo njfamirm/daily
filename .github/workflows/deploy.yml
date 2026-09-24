@@ -95,11 +95,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: "cloudflare"
-          secrets: |
-            AUTH_TOKEN
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
 
       - name: Cloudflare Token Notice
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
