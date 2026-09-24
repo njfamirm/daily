@@ -10,7 +10,8 @@
     "prepare": "vp config",
     "cap:sync": "vp run build && cap sync",
     "cap:android": "cap open android",
-    "cap:ios": "cap open ios"
+    "cap:ios": "cap open ios",
+    "cap": "cap"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.0",
