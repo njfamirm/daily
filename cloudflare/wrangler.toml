@@ -2,11 +2,11 @@ name = "taskdrop-sync-relay"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
+routes = [{ pattern = "task.njfamirm.ir", custom_domain = true }]
+
 [assets]
 directory = "../dist"
 binding = "ASSETS"
-
-routes = [{ pattern = "task.njfamirm.ir", custom_domain = true }]
 
 [[kv_namespaces]]
 binding = "VAULTS"

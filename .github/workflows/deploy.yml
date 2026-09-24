@@ -166,7 +166,8 @@ jobs:
           generate_release_notes: true
 
       - name: Deploy to Cloudflare Workers
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        continue-on-error: true
         run: npx --yes wrangler deploy --config wrangler.toml
         working-directory: cloudflare
         env:
