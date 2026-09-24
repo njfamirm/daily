@@ -51,7 +51,7 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
       return dueTime >= startOfTomorrow && dueTime <= endOfTomorrow;
     });
 
-    let md = `📅 **گزارش روزانه daily** — ${dateStr}\n\n`;
+    let md = `📅 **گزارش روزانه** — ${dateStr}\n\n`;
 
     // بخش انجام‌شده
     md += `✅ **کارهای انجام‌شده امروز (${doneToday.length} مورد):**\n`;
@@ -69,7 +69,7 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
     if (openToday.length > 0) {
       md += `⏳ **باقی‌مانده‌های امروز (${openToday.length} مورد):**\n`;
       for (const t of openToday) {
-        const pStr = t.priority === "high" ? " 🚨 (فوری)" : "";
+        const pStr = t.priority === "high" ? " 🚨 فوری" : "";
         const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
         md += `- [ ] ${t.title}${pStr}${tagStr} (${formatDue(t.due)})\n`;
       }
@@ -80,7 +80,7 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
     if (tomorrowTasks.length > 0) {
       md += `🎯 **برنامه‌های فردا (${tomorrowTasks.length} مورد):**\n`;
       for (const t of tomorrowTasks) {
-        const pStr = t.priority === "high" ? " 🚨 (فوری)" : "";
+        const pStr = t.priority === "high" ? " 🚨 فوری" : "";
         const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
         md += `- [ ] ${t.title}${pStr}${tagStr}\n`;
       }
@@ -127,7 +127,7 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
             <div className="grid size-7 place-items-center rounded-lg bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
               <FileText className="size-4" />
             </div>
-            <h2 className="text-base font-semibold text-zinc-100">گزارش روزانه (Daily Digest)</h2>
+            <h2 className="text-base font-semibold text-zinc-100">گزارش روزانه</h2>
           </div>
           <Button variant="ghost" size="icon" aria-label="بستن" onClick={onClose}>
             <X />

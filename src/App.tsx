@@ -216,12 +216,12 @@ export function App() {
       ),
     }));
     const presetLabels: Record<SnoozePreset, string> = {
-      "15m": "۱۵ دقیقه",
-      "1h": "۱ ساعت",
+      "15m": "۱۵ دقیقه بعد",
+      "1h": "۱ ساعت بعد",
       tomorrow: "فردا ۸:۳۰ صبح",
       weekend: "شنبه ۹:۰۰ صبح",
     };
-    showToast(`موعد تسک به تعویق افتاد (${presetLabels[preset]})`, () => setDb(before));
+    showToast(`موعد به تعویق افتاد: ${presetLabels[preset]}`, () => setDb(before));
   };
 
   const rename = (id: string, title: string, description?: string | null) =>
@@ -346,7 +346,7 @@ export function App() {
                 setToast(null);
               }}
             >
-              برگردان (Ctrl+Z)
+              برگردان
             </button>
           )}
         </div>

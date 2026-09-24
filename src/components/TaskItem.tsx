@@ -155,7 +155,7 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
               variant="ghost"
               size="icon"
               aria-label="تعویق موعد"
-              title="تعویق هوشمند (Snooze)"
+              title="تعویق موعد"
               onClick={() => setSnoozeOpen((prev) => !prev)}
               className={cn(
                 "transition-opacity",
@@ -170,7 +170,7 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
             {snoozeOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSnoozeOpen(false)} />
-                <div className="absolute end-0 top-full z-50 mt-1.5 w-40 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900/95 p-1 text-xs shadow-xl backdrop-blur-md">
+                <div className="absolute end-0 top-full z-50 mt-1.5 w-36 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900/95 p-1 text-xs shadow-xl backdrop-blur-md">
                   <div className="px-2 py-1 text-[10px] font-medium text-zinc-500 border-b border-zinc-800">
                     تعویق موعد به:
                   </div>
@@ -180,10 +180,9 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
                       onSnooze(task.id, "15m");
                       setSnoozeOpen(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                    className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
                   >
-                    <span>+۱۵ دقیقه</span>
-                    <span className="text-[10px] text-zinc-500">15m</span>
+                    <span>۱۵ دقیقه بعد</span>
                   </button>
                   <button
                     type="button"
@@ -191,10 +190,9 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
                       onSnooze(task.id, "1h");
                       setSnoozeOpen(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                    className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
                   >
-                    <span>+۱ ساعت</span>
-                    <span className="text-[10px] text-zinc-500">1h</span>
+                    <span>۱ ساعت بعد</span>
                   </button>
                   <button
                     type="button"
@@ -202,10 +200,9 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
                       onSnooze(task.id, "tomorrow");
                       setSnoozeOpen(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                    className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
                   >
                     <span>فردا ۸:۳۰ صبح</span>
-                    <span className="text-[10px] text-zinc-500">فردا</span>
                   </button>
                   <button
                     type="button"
@@ -213,10 +210,9 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
                       onSnooze(task.id, "weekend");
                       setSnoozeOpen(false);
                     }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                    className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
                   >
-                    <span>شنبه بعد ۹:۰۰</span>
-                    <span className="text-[10px] text-zinc-500">شنبه</span>
+                    <span>شنبه بعد ۹:۰۰ صبح</span>
                   </button>
                 </div>
               </>

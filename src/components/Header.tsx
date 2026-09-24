@@ -140,7 +140,7 @@ export function Header({
           variant="outline"
           size="sm"
           onClick={copy}
-          title="کپی پرامپت و کل تسک‌ها برای هوش مصنوعی (Ctrl+C)"
+          title="کپی برای هوش مصنوعی"
           className="gap-1.5 border-zinc-700/90 bg-zinc-900/90 text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800 font-medium text-xs px-3"
         >
           {copied ? (
@@ -168,7 +168,7 @@ export function Header({
           variant="ghost"
           size="icon"
           aria-label={showInput ? "مخفی‌کردن باکس ورودی" : "نمایش باکس ورودی دستی"}
-          title={showInput ? "مخفی‌کردن باکس ورودی دستی" : "نمایش باکس ورودی دستی (/)"}
+          title={showInput ? "مخفی‌کردن باکس ورودی دستی" : "نمایش باکس ورودی دستی"}
           onClick={onToggleInput}
           className={cn(
             "transition-colors",
@@ -207,7 +207,7 @@ export function Header({
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <Brain className="size-4 text-violet-400" />
-                  <span className="flex-1 text-start">حافظه هوش مصنوعی (AI Memory)</span>
+                  <span className="flex-1 text-start">حافظه هوش مصنوعی</span>
                   {db.aiMemory?.trim() && (
                     <span className="size-1.5 rounded-full bg-violet-400 animate-pulse" />
                   )}
@@ -222,7 +222,7 @@ export function Header({
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <FileText className="size-4 text-emerald-400" />
-                  <span className="flex-1 text-start">گزارش روزانه (Daily Digest)</span>
+                  <span className="flex-1 text-start">گزارش روزانه</span>
                 </button>
 
                 <button
