@@ -8,7 +8,16 @@ import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
+import { Clock, Flame, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+export type SortMode = "priority" | "due" | "created";
+
+const SORT_OPTIONS: { id: SortMode; label: string; icon: typeof Flame; iconColor: string }[] = [
+  { id: "priority", label: "اولویت", icon: Flame, iconColor: "text-red-400" },
+  { id: "due", label: "موعد", icon: Clock, iconColor: "text-emerald-400" },
+  { id: "created", label: "جدیدترین", icon: Sparkles, iconColor: "text-sky-400" },
+];
 
 function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string {
   const d = new Date(iso);
@@ -245,43 +254,112 @@ export function App() {
     showToast("تسک‌های انجام‌شده پاک شدند", () => setDb(before));
   };
 
+  const [sortBy, setSortBy] = useState<SortMode>(() => {
+    try {
+      const saved = localStorage.getItem("daily.sortBy") as SortMode | null;
+      if (saved === "priority" || saved === "due" || saved === "created") return saved;
+    } catch {}
+    return "priority";
+  });
+
+  const handleSetSortBy = (mode: SortMode) => {
+    setSortBy(mode);
+    try {
+      localStorage.setItem("daily.sortBy", mode);
+    } catch {}
+  };
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of db.tasks) {
+      for (const tag of t.tags || []) {
+        if (tag.trim()) set.add(tag.trim());
+      }
+    }
+    return Array.from(set);
+  }, [db.tasks]);
+
   const groups = useMemo(() => {
     const open = db.tasks.filter((t) => !t.done);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
 
-    const sortTasks = (a: Task, b: Task) => {
-      // 1. اولویت: high (0) > medium (1) > none (2) > low (3)
-      const pWeight = { high: 0, medium: 1, none: 2, low: 3 };
-      const aP = pWeight[a.priority || "none"];
-      const bP = pWeight[b.priority || "none"];
-      if (aP !== bP) return aP - bP;
+    if (sortBy === "priority") {
+      const sortTasks = (a: Task, b: Task) => {
+        // 1. اولویت: high (0) > medium (1) > none (2) > low (3)
+        const pWeight = { high: 0, medium: 1, none: 2, low: 3 };
+        const aP = pWeight[a.priority || "none"];
+        const bP = pWeight[b.priority || "none"];
+        if (aP !== bP) return aP - bP;
 
-      // 2. وضعیت سررسید: تسک سررسیدشده بالاتر می‌آید
-      const aOverdue = a.due && ts(a) <= now ? 0 : 1;
-      const bOverdue = b.due && ts(b) <= now ? 0 : 1;
-      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+        // 2. وضعیت سررسید: تسک سررسیدشده بالاتر می‌آید
+        const aOverdue = a.due && ts(a) <= now ? 0 : 1;
+        const bOverdue = b.due && ts(b) <= now ? 0 : 1;
+        if (aOverdue !== bOverdue) return aOverdue - bOverdue;
 
-      // 3. تاریخ نزدیک‌تر
-      const timeDiff = ts(a) - ts(b);
-      if (timeDiff !== 0) return timeDiff;
+        // 3. تاریخ نزدیک‌تر
+        const timeDiff = ts(a) - ts(b);
+        if (timeDiff !== 0) return timeDiff;
 
-      // 4. جدیدترها
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    };
+        // 4. جدیدترها
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      };
 
-    const highPriority = open.filter((t) => t.priority === "high").sort(sortTasks);
-    const regularTasks = open.filter((t) => t.priority !== "high").sort(sortTasks);
+      const highPriority = open.filter((t) => t.priority === "high").sort(sortTasks);
+      const regularTasks = open.filter((t) => t.priority !== "high").sort(sortTasks);
+      const done = db.tasks.filter((t) => t.done).slice(0, 25);
+
+      return {
+        mode: "priority" as const,
+        highPriority,
+        regularTasks,
+        done,
+      };
+    }
+
+    if (sortBy === "due") {
+      const overdue = open
+        .filter((t) => t.due !== null && ts(t) <= now)
+        .sort((a, b) => ts(a) - ts(b));
+
+      const upcoming = open
+        .filter((t) => t.due !== null && ts(t) > now)
+        .sort((a, b) => ts(a) - ts(b));
+
+      const noDue = open
+        .filter((t) => t.due === null)
+        .sort((a, b) => {
+          const pWeight = { high: 0, medium: 1, none: 2, low: 3 };
+          return pWeight[a.priority || "none"] - pWeight[b.priority || "none"];
+        });
+
+      const done = db.tasks.filter((t) => t.done).slice(0, 25);
+
+      return {
+        mode: "due" as const,
+        overdue,
+        upcoming,
+        noDue,
+        done,
+      };
+    }
+
+    // sortBy === "created"
+    const createdTasks = [...open].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
     const done = db.tasks.filter((t) => t.done).slice(0, 25);
 
     return {
-      highPriority,
-      regularTasks,
+      mode: "created" as const,
+      createdTasks,
       done,
     };
-  }, [db.tasks, now]);
+  }, [db.tasks, now, sortBy]);
 
   const setSetting = <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) =>
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
+
+  const openCount = db.tasks.filter((t) => !t.done).length;
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 py-6 sm:py-10">
@@ -297,7 +375,7 @@ export function App() {
         onMessage={showToast}
       />
 
-      {showInput && <QuickAdd onAdd={addTask} />}
+      {showInput && <QuickAdd onAdd={addTask} existingTags={allTags} />}
 
       <Notes
         notes={db.notes}
@@ -313,20 +391,87 @@ export function App() {
       />
 
       <main className="flex-1 space-y-6">
-        <Group
-          title="🔥 فوری و بااهمیت"
-          tasks={groups.highPriority}
-          alert
-          onSnooze={snooze}
-          {...{ toggle, remove, rename }}
-        />
-        <Group
-          title="کارهای جاری"
-          tasks={groups.regularTasks}
-          onSnooze={snooze}
-          {...{ toggle, remove, rename }}
-        />
+        {db.tasks.length > 0 && (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-medium text-zinc-400">{openCount} تسک باز</span>
+            <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 text-xs shadow-xs">
+              {SORT_OPTIONS.map((opt) => {
+                const active = sortBy === opt.id;
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleSetSortBy(opt.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
+                      active
+                        ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40",
+                    )}
+                  >
+                    <Icon className={cn("size-3.5", active ? opt.iconColor : "text-zinc-500")} />
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {groups.mode === "priority" && (
+          <>
+            <Group
+              title="🔥 فوری و بااهمیت"
+              tasks={groups.highPriority}
+              alert
+              onSnooze={snooze}
+              {...{ toggle, remove, rename }}
+            />
+            <Group
+              title="کارهای جاری"
+              tasks={groups.regularTasks}
+              onSnooze={snooze}
+              {...{ toggle, remove, rename }}
+            />
+          </>
+        )}
+
+        {groups.mode === "due" && (
+          <>
+            <Group
+              title="🚨 سررسیدشده"
+              tasks={groups.overdue}
+              alert
+              onSnooze={snooze}
+              {...{ toggle, remove, rename }}
+            />
+            <Group
+              title="📅 دارای موعد"
+              tasks={groups.upcoming}
+              onSnooze={snooze}
+              {...{ toggle, remove, rename }}
+            />
+            <Group
+              title="بدون موعد"
+              tasks={groups.noDue}
+              onSnooze={snooze}
+              {...{ toggle, remove, rename }}
+            />
+          </>
+        )}
+
+        {groups.mode === "created" && (
+          <Group
+            title="⚡ تسک‌ها (جدیدترین)"
+            tasks={groups.createdTasks}
+            onSnooze={snooze}
+            {...{ toggle, remove, rename }}
+          />
+        )}
+
         <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
+
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
             لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300 font-medium">پیست</strong>{" "}
