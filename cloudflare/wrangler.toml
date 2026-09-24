@@ -1,0 +1,23 @@
+name = "taskdrop-sync-relay"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+
+routes = [{ pattern = "task.njfamirm.ir", custom_domain = true }]
+
+[[kv_namespaces]]
+binding = "VAULTS"
+id = "c9bf43b6a07f435f9f58d3727baeed03"
+
+[durable_objects]
+bindings = [{ name = "VAULT_ROOMS", class_name = "VaultRoom" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["VaultRoom"]
+
+[observability]
+enabled = true
