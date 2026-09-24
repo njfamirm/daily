@@ -1,12 +1,14 @@
 export type Repeat = "none" | "daily" | "weekly" | "monthly";
 export type Priority = "none" | "low" | "medium" | "high";
+export type ThemeMode = "dark" | "light";
+export type PrimaryColor = "yellow" | "emerald" | "violet" | "blue" | "rose" | "orange";
 
 export interface Task {
   /** شناسه یکتا */
   id: string;
   /** متن اصلی و کوتاه تعهد */
   title: string;
-  /** توضیحات تکمیلی و جزئیات (فقط در صورت ضرورت) */
+  /** توضیحات تکمیلی و جزئیات (یا خلاصه انجام کار هنگام دان‌شدن) */
   description?: string | null;
   /** زمان یادآوری، ISO 8601 با تایم‌زون محلی؛ null یعنی بدون زمان */
   due: string | null;
@@ -38,6 +40,10 @@ export interface Settings {
   checkIntervalSec: number;
   /** چند دقیقه قبل از موعد هم یادآوری شود */
   leadMinutes: number;
+  /** تم دارک یا لایت */
+  theme: ThemeMode;
+  /** رنگ پرایمری انتخابی */
+  primaryColor: PrimaryColor;
 }
 
 export interface DB {
@@ -56,6 +62,8 @@ export const DEFAULT_DB: DB = {
     notifications: true,
     checkIntervalSec: 15,
     leadMinutes: 0,
+    theme: "dark",
+    primaryColor: "yellow",
   },
   aiMemory: "",
   notes: [],

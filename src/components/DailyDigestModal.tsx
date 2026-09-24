@@ -60,7 +60,11 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
     } else {
       for (const t of doneToday) {
         const tagStr = t.tags.length > 0 ? ` [${t.tags.map((x) => `#${x}`).join(" ")}]` : "";
-        md += `- [x] ${t.title}${tagStr}\n`;
+        const descStr =
+          t.description && t.description.trim()
+            ? `\n    ↳ _توضیحات انجام_: ${t.description.trim()}`
+            : "";
+        md += `- [x] ${t.title}${tagStr}${descStr}\n`;
       }
     }
     md += "\n";
@@ -145,7 +149,7 @@ export function DailyDigestModal({ open, db, onClose, onMessage }: Props) {
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3">
-          <span className="text-[11px] text-zinc-500">فرمت استاندارد Markdown</span>
+          <span className="text-[11px] text-zinc-500">فرمت استاندارد مارک‌داون</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
               بستن

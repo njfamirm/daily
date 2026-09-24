@@ -3,12 +3,21 @@ import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
+import { fireConfetti } from "@/lib/confetti.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
-import { Clock, Flame, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  CheckSquare,
+  Clock,
+  Flame,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SortMode = "priority" | "due" | "created";
@@ -194,21 +203,27 @@ export function App() {
   };
 
   const toggle = (id: string) =>
-    update((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((t) => {
-        if (t.id !== id) return t;
-        // تسک تکرارشونده به‌جای بسته‌شدن، به موعد بعدی می‌رود
-        if (!t.done && t.repeat !== "none" && t.due) {
-          return { ...t, due: nextDue(t.due, t.repeat), notifiedAt: null };
-        }
-        return {
-          ...t,
-          done: !t.done,
-          doneAt: t.done ? null : new Date().toISOString(),
-        };
-      }),
-    }));
+    update((prev) => {
+      const target = prev.tasks.find((t) => t.id === id);
+      if (target && !target.done) {
+        fireConfetti();
+      }
+      return {
+        ...prev,
+        tasks: prev.tasks.map((t) => {
+          if (t.id !== id) return t;
+          // تسک تکرارشونده به‌جای بسته‌شدن، به موعد بعدی می‌رود
+          if (!t.done && t.repeat !== "none" && t.due) {
+            return { ...t, due: nextDue(t.due, t.repeat), notifiedAt: null };
+          }
+          return {
+            ...t,
+            done: !t.done,
+            doneAt: t.done ? null : new Date().toISOString(),
+          };
+        }),
+      };
+    });
 
   const remove = (id: string) => {
     const before = db;
@@ -422,7 +437,8 @@ export function App() {
         {groups.mode === "priority" && (
           <>
             <Group
-              title="🔥 فوری و بااهمیت"
+              title="فوری و بااهمیت"
+              icon={<Flame className="size-4 text-red-500 fill-red-500/20" />}
               tasks={groups.highPriority}
               alert
               onSnooze={snooze}
@@ -430,6 +446,7 @@ export function App() {
             />
             <Group
               title="کارهای جاری"
+              icon={<CheckSquare className="size-4 text-zinc-400" />}
               tasks={groups.regularTasks}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
@@ -440,20 +457,23 @@ export function App() {
         {groups.mode === "due" && (
           <>
             <Group
-              title="🚨 سررسیدشده"
+              title="سررسیدشده"
+              icon={<AlertCircle className="size-4 text-red-500" />}
               tasks={groups.overdue}
               alert
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
             <Group
-              title="📅 دارای موعد"
+              title="دارای موعد"
+              icon={<Calendar className="size-4 text-emerald-400" />}
               tasks={groups.upcoming}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
             />
             <Group
               title="بدون موعد"
+              icon={<Clock className="size-4 text-zinc-400" />}
               tasks={groups.noDue}
               onSnooze={snooze}
               {...{ toggle, remove, rename }}
@@ -463,14 +483,20 @@ export function App() {
 
         {groups.mode === "created" && (
           <Group
-            title="⚡ تسک‌ها (جدیدترین)"
+            title="کارهای باز (جدیدترین)"
+            icon={<Sparkles className="size-4 text-sky-400" />}
             tasks={groups.createdTasks}
             onSnooze={snooze}
             {...{ toggle, remove, rename }}
           />
         )}
 
-        <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
+        <Group
+          title="انجام‌شده"
+          icon={<CheckCircle2 className="size-4 text-emerald-400" />}
+          tasks={groups.done}
+          {...{ toggle, remove, rename }}
+        />
 
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
@@ -503,6 +529,7 @@ export function App() {
 
 function Group({
   title,
+  icon,
   tasks,
   alert,
   toggle,
@@ -511,6 +538,7 @@ function Group({
   onSnooze,
 }: {
   title: string;
+  icon?: React.ReactNode;
   tasks: Task[];
   alert?: boolean;
   toggle: (id: string) => void;
@@ -527,7 +555,10 @@ function Group({
           alert && "text-red-400 font-bold",
         )}
       >
-        <span>{title}</span>
+        <span className="flex items-center gap-1.5">
+          {icon}
+          <span>{title}</span>
+        </span>
         <span
           className={cn(
             "rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] font-mono text-zinc-300",

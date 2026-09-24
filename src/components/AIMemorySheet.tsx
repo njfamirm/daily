@@ -56,7 +56,7 @@ export function AIMemorySheet({ open, memory, onSave, onClose }: Props) {
             <div className="grid size-7 place-items-center rounded-lg bg-violet-950/80 border border-violet-800/60 text-violet-400">
               <Brain className="size-4" />
             </div>
-            <h2 className="text-base font-semibold text-zinc-100">حافظه هوش مصنوعی (AI Memory)</h2>
+            <h2 className="text-base font-semibold text-zinc-100">حافظه هوش مصنوعی</h2>
           </div>
           <Button variant="ghost" size="icon" aria-label="بستن" onClick={onClose}>
             <X />

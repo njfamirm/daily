@@ -8,7 +8,8 @@ import { Kbd } from "@/components/ui/kbd.tsx";
 import { requestNotificationPermission } from "@/lib/notify.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
-import type { DB } from "@/lib/types.ts";
+import { applyTheme, COLOR_PRESETS } from "@/lib/theme.ts";
+import type { DB, PrimaryColor, ThemeMode } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
   Bell,
@@ -20,8 +21,11 @@ import {
   FileText,
   Flame,
   HelpCircle,
+  Moon,
   MoreVertical,
+  Palette,
   Plus,
+  Sun,
   Trash2,
   Volume2,
   VolumeX,
@@ -59,6 +63,15 @@ export function Header({
   const [helpOpen, setHelpOpen] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
 
+  const currentTheme: ThemeMode = db.settings.theme || "dark";
+  const currentPrimary: PrimaryColor = db.settings.primaryColor || "yellow";
+  const activeColorObj = COLOR_PRESETS.find((c) => c.id === currentPrimary) || COLOR_PRESETS[0];
+
+  // اعمال تم و رنگ پرایمری به سند
+  useEffect(() => {
+    applyTheme(currentTheme, currentPrimary);
+  }, [currentTheme, currentPrimary]);
+
   // بستن منو با Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -69,6 +82,18 @@ export function Header({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [menuOpen]);
+
+  const toggleTheme = () => {
+    const nextTheme: ThemeMode = currentTheme === "dark" ? "light" : "dark";
+    onUpdateSetting("theme", nextTheme);
+    onMessage(nextTheme === "dark" ? "تم تاریک فعال شد" : "تم روشن فعال شد");
+  };
+
+  const selectPrimaryColor = (color: PrimaryColor) => {
+    onUpdateSetting("primaryColor", color);
+    const colorObj = COLOR_PRESETS.find((c) => c.id === color);
+    onMessage(`رنگ ${colorObj?.label || color} انتخاب شد`);
+  };
 
   const copy = async () => {
     const text = buildPayload(db);
@@ -114,19 +139,20 @@ export function Header({
       <div className="flex items-center gap-2.5">
         <div
           className="grid size-9 shrink-0 place-items-center rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-inner"
-          title="daily - متمرکز روی کارها"
+          title="daily"
         >
           <svg viewBox="0 0 100 100" className="size-5.5">
             <path
-              d="M22 52 L40 70 L78 28"
+              d="M28 52 L44 68 L74 34"
               fill="none"
               stroke="#ffffff"
-              strokeWidth="12"
+              strokeWidth="10"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </div>
+
         {dueCount > 0 && (
           <span className="rounded-full border border-red-500/40 bg-red-500/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
             {dueCount} سررسید
@@ -134,8 +160,24 @@ export function Header({
         )}
       </div>
 
-      {/* دکمه‌های اصلی هدر: کپی، پیست، تاگل اینپوت، و سه نقطه */}
+      {/* دکمه‌های اصلی هدر */}
       <div className="flex items-center gap-2">
+        {/* دکمه سوییچ تم روشن/تاریک */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={currentTheme === "dark" ? "سوییچ به تم روشن" : "سوییچ به تم تاریک"}
+          title={currentTheme === "dark" ? "سوییچ به تم روشن" : "سوییچ به تم تاریک"}
+          onClick={toggleTheme}
+          className="text-zinc-400 hover:text-zinc-100"
+        >
+          {currentTheme === "dark" ? (
+            <Sun className="size-4 text-amber-400" />
+          ) : (
+            <Moon className="size-4 text-sky-400" />
+          )}
+        </Button>
+
         {/* دکمه برجسته کپی برای AI */}
         <Button
           variant="outline"
@@ -147,7 +189,7 @@ export function Header({
           {copied ? (
             <Check className="size-3.5 text-emerald-400" />
           ) : (
-            <ClipboardCopy className="size-3.5" />
+            <ClipboardCopy className="size-3.5 text-zinc-300" />
           )}
           <span>{copied ? "کپی شد" : "کپی"}</span>
         </Button>
@@ -198,14 +240,46 @@ export function Header({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute end-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 p-1.5 text-xs shadow-2xl backdrop-blur-md">
+              <div className="absolute end-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 p-2 text-xs shadow-2xl backdrop-blur-md">
+                {/* انتخاب پالت رنگ پرایمری */}
+                <div className="mb-2 px-2 py-1">
+                  <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-zinc-400">
+                    <span className="flex items-center gap-1.5">
+                      <Palette className="size-3.5 text-amber-400" />
+                      رنگ تم اصلی
+                    </span>
+                    <span className="text-[10px] text-zinc-500">{activeColorObj.label}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-1">
+                    {COLOR_PRESETS.map((preset) => {
+                      const isSelected = currentPrimary === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => selectPrimaryColor(preset.id)}
+                          title={preset.label}
+                          className={cn(
+                            "relative size-6 rounded-full transition-transform hover:scale-110 cursor-pointer",
+                            preset.dotClass,
+                            isSelected &&
+                              "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110",
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="my-1 border-t border-zinc-800/80" />
+
                 <button
                   type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     setMemoryOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <Brain className="size-4 text-violet-400" />
                   <span className="flex-1 text-start">حافظه هوش مصنوعی</span>
@@ -220,7 +294,7 @@ export function Header({
                     setMenuOpen(false);
                     setDigestOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <FileText className="size-4 text-emerald-400" />
                   <span className="flex-1 text-start">گزارش روزانه</span>
@@ -232,7 +306,7 @@ export function Header({
                     setMenuOpen(false);
                     setStreakOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <Flame className="size-4 text-orange-400" />
                   <span className="flex-1 text-start">آمار و پیوستگی ۷ روزه</span>
@@ -248,7 +322,7 @@ export function Header({
                     if (next) void requestNotificationPermission();
                     onMessage(next ? "نوتیفیکیشن فعال شد" : "نوتیفیکیشن غیرفعال شد");
                   }}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     {db.settings.notifications ? (
@@ -277,7 +351,7 @@ export function Header({
                     onUpdateSetting("sound", next);
                     onMessage(next ? "صدای زنگ فعال شد" : "صدای زنگ خاموش شد");
                   }}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     {db.settings.sound ? (
@@ -307,7 +381,7 @@ export function Header({
                     setMenuOpen(false);
                     setHelpOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
                 >
                   <HelpCircle className="size-4 text-zinc-400" />
                   <span className="flex-1 text-start">راهنما و کلیدهای میانبر</span>
@@ -321,7 +395,7 @@ export function Header({
                       setMenuOpen(false);
                       onClearDone();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
                   >
                     <Trash2 className="size-4 text-red-400" />
                     <span className="flex-1 text-start">پاک‌سازی انجام‌شده‌ها</span>
@@ -339,7 +413,7 @@ export function Header({
         memory={db.aiMemory || ""}
         onSave={(mem) => {
           onUpdateMemory(mem);
-          onMessage("حافظه AI به‌روزرسانی شد");
+          onMessage("حافظه هوش مصنوعی به‌روزرسانی شد");
         }}
         onClose={() => setMemoryOpen(false)}
       />

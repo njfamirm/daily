@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
-import { X } from "lucide-react";
+import { Calendar, Clock, Flame, Keyboard, Repeat, Tag, X } from "lucide-react";
 import { useEffect } from "react";
 
 interface Row {
@@ -59,10 +59,21 @@ const OTHER_ROWS: Row[] = [
   { pattern: "بدون هیچ‌کدام از بالا", meaning: "ثبت تسک ساده بدون موعد" },
 ];
 
-function ShortcutsTable({ title, rows }: { title: string; rows: ShortcutRow[] }) {
+function ShortcutsTable({
+  title,
+  icon,
+  rows,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  rows: ShortcutRow[];
+}) {
   return (
     <div>
-      <h3 className="mb-1.5 text-xs font-semibold text-zinc-300">{title}</h3>
+      <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+        {icon}
+        <span>{title}</span>
+      </h3>
       <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
         {rows.map((r, i) => (
           <div
@@ -93,10 +104,13 @@ function ShortcutsTable({ title, rows }: { title: string; rows: ShortcutRow[] })
   );
 }
 
-function Table({ title, rows }: { title: string; rows: Row[] }) {
+function Table({ title, icon, rows }: { title: string; icon?: React.ReactNode; rows: Row[] }) {
   return (
     <div>
-      <h3 className="mb-1.5 text-xs font-semibold text-zinc-300">{title}</h3>
+      <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+        {icon}
+        <span>{title}</span>
+      </h3>
       <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
         {rows.map((r, i) => (
           <div
@@ -155,12 +169,32 @@ export function HelpSheet({ open, onClose }: Props) {
         </p>
 
         <div className="space-y-4">
-          <ShortcutsTable title="⌨️ کلیدهای میانبر" rows={SHORTCUT_ROWS} />
-          <Table title="🚨 اولویت‌بندی" rows={PRIORITY_ROWS} />
-          <Table title="📅 تاریخ" rows={DATE_ROWS} />
-          <Table title="⏰ ساعت" rows={TIME_ROWS} />
-          <Table title="🔁 تکرار" rows={REPEAT_ROWS} />
-          <Table title="🏷️ برچسب‌ها و بقیه موارد" rows={OTHER_ROWS} />
+          <ShortcutsTable
+            title="کلیدهای میانبر"
+            icon={<Keyboard className="size-4 text-indigo-400" />}
+            rows={SHORTCUT_ROWS}
+          />
+          <Table
+            title="اولویت‌بندی"
+            icon={<Flame className="size-4 text-red-400" />}
+            rows={PRIORITY_ROWS}
+          />
+          <Table
+            title="تاریخ"
+            icon={<Calendar className="size-4 text-emerald-400" />}
+            rows={DATE_ROWS}
+          />
+          <Table title="ساعت" icon={<Clock className="size-4 text-cyan-400" />} rows={TIME_ROWS} />
+          <Table
+            title="تکرار"
+            icon={<Repeat className="size-4 text-purple-400" />}
+            rows={REPEAT_ROWS}
+          />
+          <Table
+            title="برچسب‌ها و بقیه موارد"
+            icon={<Tag className="size-4 text-amber-400" />}
+            rows={OTHER_ROWS}
+          />
         </div>
 
         <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 text-sm">
