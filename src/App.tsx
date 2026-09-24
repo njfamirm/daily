@@ -44,7 +44,6 @@ export function App() {
   const { db, setDb, update } = useDB();
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(() => {
     try {
       const saved = localStorage.getItem("daily.showInput");
@@ -146,14 +145,6 @@ export function App() {
         return;
       }
 
-      // Escape برای لغو فیلتر تگ
-      if (e.key === "Escape") {
-        if (selectedTag) {
-          setSelectedTag(null);
-          return;
-        }
-      }
-
       // هنگام تایپ داخل input یا textarea کلیدهای ناوبری فعال نشوند
       if (isInputActive) return;
 
@@ -171,7 +162,7 @@ export function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedTag, toast]);
+  }, [toast]);
 
   const addTask = (raw: string) => {
     const p = parseInput(raw);
@@ -244,17 +235,8 @@ export function App() {
     showToast("تسک‌های انجام‌شده پاک شدند", () => setDb(before));
   };
 
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of db.tasks) {
-      for (const tag of t.tags) set.add(tag);
-    }
-    return Array.from(set);
-  }, [db.tasks]);
-
   const groups = useMemo(() => {
-    const filtered = selectedTag ? db.tasks.filter((t) => t.tags.includes(selectedTag)) : db.tasks;
-    const open = filtered.filter((t) => !t.done);
+    const open = db.tasks.filter((t) => !t.done);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
@@ -272,9 +254,9 @@ export function App() {
       today: open.filter((t) => t.due && ts(t) > now && ts(t) <= endOfToday.getTime()).sort(byDue),
       later: open.filter((t) => t.due && ts(t) > endOfToday.getTime()).sort(byDue),
       someday: open.filter((t) => !t.due).sort(byDue),
-      done: filtered.filter((t) => t.done).slice(0, 20),
+      done: db.tasks.filter((t) => t.done).slice(0, 20),
     };
-  }, [db.tasks, now, selectedTag]);
+  }, [db.tasks, now]);
 
   const setSetting = <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) =>
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
@@ -295,39 +277,6 @@ export function App() {
 
       {showInput && <QuickAdd onAdd={addTask} />}
 
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 px-1 py-0.5 text-xs">
-          <span className="text-zinc-500 text-[11px]">فیلتر برچسب:</span>
-          {allTags.map((tag) => {
-            const isSelected = selectedTag === tag;
-            return (
-              <button
-                type="button"
-                key={tag}
-                onClick={() => setSelectedTag(isSelected ? null : tag)}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 font-medium transition-all cursor-pointer text-[11px]",
-                  isSelected
-                    ? "border-white bg-white text-black font-semibold shadow-xs"
-                    : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200",
-                )}
-              >
-                #{tag}
-              </button>
-            );
-          })}
-          {selectedTag && (
-            <button
-              type="button"
-              onClick={() => setSelectedTag(null)}
-              className="text-[11px] font-medium text-amber-400 underline underline-offset-2 hover:text-amber-300 ms-1 cursor-pointer"
-            >
-              نمایش همه
-            </button>
-          )}
-        </div>
-      )}
-
       <Notes
         notes={db.notes}
         onAdd={(text) =>
@@ -346,37 +295,28 @@ export function App() {
           title="سررسید شده"
           tasks={groups.overdue}
           alert
-          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="امروز"
           tasks={groups.today}
-          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="بعداً"
           tasks={groups.later}
-          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="بدون زمان"
           tasks={groups.someday}
-          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
           onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
-        <Group
-          title="انجام‌شده"
-          tasks={groups.done}
-          onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
-          {...{ toggle, remove, rename }}
-        />
+        <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
             لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300">پیست</strong> از AI دیتای
@@ -413,7 +353,6 @@ function Group({
   toggle,
   remove,
   rename,
-  onTagClick,
   onSnooze,
 }: {
   title: string;
@@ -422,7 +361,6 @@ function Group({
   toggle: (id: string) => void;
   remove: (id: string) => void;
   rename: (id: string, title: string) => void;
-  onTagClick?: (tag: string) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
 }) {
   if (tasks.length === 0) return null;
@@ -452,7 +390,6 @@ function Group({
             onToggle={toggle}
             onDelete={remove}
             onRename={rename}
-            onTagClick={onTagClick}
             onSnooze={onSnooze}
           />
         ))}

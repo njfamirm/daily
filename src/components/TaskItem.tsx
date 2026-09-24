@@ -15,11 +15,10 @@ interface Props {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
-  onTagClick?: (tag: string) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
 }
 
-export function TaskItem({ task, onToggle, onDelete, onRename, onTagClick, onSnooze }: Props) {
+export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props) {
   const [editing, setEditing] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const overdue = !task.done && task.due !== null && new Date(task.due).getTime() <= Date.now();
@@ -109,23 +108,17 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onTagClick, onSno
           {task.tags.map((t) => {
             const style = getTagStyle(t);
             return (
-              <button
-                type="button"
+              <span
                 key={t}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTagClick?.(t);
-                }}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95 cursor-pointer",
+                  "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium",
                   style.bg,
                   style.text,
                   style.border,
                 )}
-                title={`فیلتر برچسب #${t}`}
               >
                 <span className={cn("size-1.5 rounded-full", style.dot)} />#{t}
-              </button>
+              </span>
             );
           })}
         </div>
