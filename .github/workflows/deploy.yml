@@ -166,17 +166,11 @@ jobs:
           generate_release_notes: true
 
       - name: Deploy to Cloudflare Workers
-        continue-on-error: true
         working-directory: cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
-            pnpm dlx wrangler deploy --config wrangler.toml
-          else
-            echo "CLOUDFLARE_API_TOKEN not set, skipping Cloudflare deploy"
-          fi
+        run: pnpm dlx wrangler deploy --config wrangler.toml
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
