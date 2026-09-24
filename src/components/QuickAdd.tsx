@@ -1,9 +1,10 @@
 import { Input } from "@/components/ui/input.tsx";
-import { formatDue, parseInput } from "@/lib/parse.ts";
+import { Kbd } from "@/components/ui/kbd.tsx";
 import { unlockAudio } from "@/lib/notify.ts";
+import { formatDue, parseInput } from "@/lib/parse.ts";
 import { getTagStyle } from "@/lib/tags.ts";
 import { cn } from "@/lib/utils.ts";
-import { CornerDownLeft, Flame } from "lucide-react";
+import { Flame } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 interface Props {
@@ -39,11 +40,13 @@ export function QuickAdd({ onAdd }: Props) {
         }}
         className="h-14 rounded-xl border-zinc-700/80 bg-zinc-900/90 pe-14 ps-4 text-base font-normal shadow-sm placeholder:text-zinc-500 focus:border-zinc-300 focus:ring-1 focus:ring-zinc-300"
       />
-      <div className="pointer-events-none absolute end-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
-        <kbd className="hidden rounded border border-zinc-700 bg-zinc-800/90 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 sm:inline-block">
+      <div className="pointer-events-none absolute end-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+        <Kbd size="xs" className="hidden sm:inline-flex text-zinc-400">
           /
-        </kbd>
-        <CornerDownLeft className="size-4 text-zinc-400" />
+        </Kbd>
+        <Kbd size="xs" className="text-zinc-400">
+          ↵
+        </Kbd>
       </div>
       {preview && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2 px-1 text-xs">

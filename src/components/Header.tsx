@@ -4,6 +4,7 @@ import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { StreakModal } from "@/components/StreakModal.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
+import { Kbd } from "@/components/ui/kbd.tsx";
 import { requestNotificationPermission } from "@/lib/notify.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
@@ -310,7 +311,7 @@ export function Header({
                 >
                   <HelpCircle className="size-4 text-zinc-400" />
                   <span className="flex-1 text-start">راهنما و کلیدهای میانبر</span>
-                  <kbd className="text-[10px] text-zinc-500 font-mono">؟</kbd>
+                  <Kbd size="xs">؟</Kbd>
                 </button>
 
                 {hasDone && (

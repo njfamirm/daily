@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button.tsx";
+import { Kbd } from "@/components/ui/kbd.tsx";
 import { X } from "lucide-react";
 import { useEffect } from "react";
 
@@ -7,10 +8,15 @@ interface Row {
   meaning: string;
 }
 
+interface ShortcutRow {
+  shortcuts: string[][];
+  meaning: string;
+}
+
 const PRIORITY_ROWS: Row[] = [
-  { pattern: "!فوری / !مهم / فوری / ضروری", meaning: "اولویت بالا (نوار و نشانگر قرمز)" },
-  { pattern: "!متوسط / اولویت متوسط", meaning: "اولویت متوسط (نوار نارنجی)" },
-  { pattern: "!کم / سر فرصت / هر وقت شد", meaning: "اولویت پایین (نوار آبی)" },
+  { pattern: "!فوری / !مهم / فوری / ضروری", meaning: "اولویت بالا با نوار و نشانگر قرمز" },
+  { pattern: "!متوسط / اولویت متوسط", meaning: "اولویت متوسط با نوار نارنجی" },
+  { pattern: "!کم / سر فرصت / هر وقت شد", meaning: "اولویت پایین با نوار آبی" },
 ];
 
 const DATE_ROWS: Row[] = [
@@ -32,26 +38,66 @@ const REPEAT_ROWS: Row[] = [
   { pattern: "هر ماه / ماهانه", meaning: "تکرار ماهانه" },
 ];
 
-const SHORTCUT_ROWS: Row[] = [
-  { pattern: "/  یا  N", meaning: "فوکوس روی فیلد ثبت تسک جدید" },
-  { pattern: "؟  یا  Shift + /", meaning: "باز کردن راهنما و کلیدهای میانبر" },
-  { pattern: "M", meaning: "افزودن نکته جدید در بخش «جلوی چشم»" },
-  { pattern: "S", meaning: "قطع / وصل صدای زنگ" },
-  { pattern: "B", meaning: "فعال / غیرفعال‌سازی نوتیفیکیشن" },
-  { pattern: "Ctrl + Z / ⌘Z", meaning: "بازگرداندن (Undo) آخرین تسک حذف‌شده" },
-  { pattern: "Esc", meaning: "بستن پنجره‌ها یا لغو فیلتر برچسب" },
+const SHORTCUT_ROWS: ShortcutRow[] = [
+  { shortcuts: [["/"], ["N"]], meaning: "فوکوس روی فیلد ثبت تسک جدید" },
+  { shortcuts: [["؟"], ["Shift", "/"]], meaning: "باز کردن راهنما و کلیدهای میانبر" },
+  { shortcuts: [["M"]], meaning: "افزودن نکته جدید در بخش جلوی چشم" },
+  { shortcuts: [["S"]], meaning: "قطع و وصل صدای زنگ" },
+  { shortcuts: [["B"]], meaning: "فعال و غیرفعال‌سازی نوتیفیکیشن" },
+  {
+    shortcuts: [
+      ["Ctrl", "Z"],
+      ["⌘", "Z"],
+    ],
+    meaning: "بازگرداندن آخرین تسک حذف‌شده",
+  },
+  { shortcuts: [["Esc"]], meaning: "بستن پنجره‌ها یا لغو عملیات" },
 ];
 
 const OTHER_ROWS: Row[] = [
-  { pattern: "#کار / #پروژه / #خرید / #شخصی", meaning: "برچسب‌های رنگی و قابل‌فیلتر" },
-  { pattern: "بدون هیچ‌کدام از بالا", meaning: "فقط یک تسک بدون موعد ثبت می‌شود" },
+  { pattern: "#کار / #پروژه / #خرید / #شخصی", meaning: "برچسب‌های رنگی" },
+  { pattern: "بدون هیچ‌کدام از بالا", meaning: "ثبت تسک ساده بدون موعد" },
 ];
+
+function ShortcutsTable({ title, rows }: { title: string; rows: ShortcutRow[] }) {
+  return (
+    <div>
+      <h3 className="mb-1.5 text-xs font-semibold text-zinc-300">{title}</h3>
+      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className={
+              "flex items-center justify-between gap-4 px-3 py-2 text-sm" +
+              (i > 0 ? " border-t border-zinc-800/80" : "")
+            }
+          >
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              {r.shortcuts.map((combo, comboIdx) => (
+                <div key={comboIdx} className="flex items-center gap-1">
+                  {comboIdx > 0 && <span className="text-[11px] text-zinc-500 px-0.5">یا</span>}
+                  {combo.map((k, kIdx) => (
+                    <span key={kIdx} className="flex items-center gap-1">
+                      {kIdx > 0 && <span className="text-[10px] text-zinc-500">+</span>}
+                      <Kbd size="xs">{k}</Kbd>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <span className="text-end text-zinc-400 text-xs">{r.meaning}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Table({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <div>
       <h3 className="mb-1.5 text-xs font-semibold text-zinc-300">{title}</h3>
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
+      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
         {rows.map((r, i) => (
           <div
             key={r.pattern}
@@ -60,10 +106,10 @@ function Table({ title, rows }: { title: string; rows: Row[] }) {
               (i > 0 ? " border-t border-zinc-800/80" : "")
             }
           >
-            <code className="shrink-0 font-mono text-zinc-100 bg-zinc-800/80 px-1.5 py-0.5 rounded text-xs border border-zinc-700/60">
+            <code className="shrink-0 font-mono text-zinc-200 bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs border border-zinc-700/60 shadow-xs">
               {r.pattern}
             </code>
-            <span className="text-end text-zinc-400 text-xs">{r.meaning}</span>
+            <span className="text-end text-zinc-400 text-xs leading-5">{r.meaning}</span>
           </div>
         ))}
       </div>
@@ -104,12 +150,12 @@ export function HelpSheet({ open, onClose }: Props) {
         </div>
 
         <p className="mb-4 text-xs leading-6 text-zinc-300">
-          هرچی توی خط بنویسی، اپ اول این الگوها رو از متن جدا می‌کنه و بقیه‌ش می‌شه عنوان تسک. ترتیب
-          اهمیتی نداره؛ می‌تونی همه رو با هم توی یک خط بیاری.
+          هر چه در خط ورودی بنویسید، اپ ابتدا این الگوها را از متن تشخیص داده و استخراج می‌کند و بقیه
+          متن عنوان تسک خواهد شد.
         </p>
 
         <div className="space-y-4">
-          <Table title="⌨️ کلیدهای میانبر (Shortcuts)" rows={SHORTCUT_ROWS} />
+          <ShortcutsTable title="⌨️ کلیدهای میانبر" rows={SHORTCUT_ROWS} />
           <Table title="🚨 اولویت‌بندی" rows={PRIORITY_ROWS} />
           <Table title="📅 تاریخ" rows={DATE_ROWS} />
           <Table title="⏰ ساعت" rows={TIME_ROWS} />
@@ -117,11 +163,11 @@ export function HelpSheet({ open, onClose }: Props) {
           <Table title="🏷️ برچسب‌ها و بقیه موارد" rows={OTHER_ROWS} />
         </div>
 
-        <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 text-sm">
+        <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 text-sm">
           <div className="mb-1 text-xs font-semibold text-zinc-400">مثال ترکیبی</div>
           <code className="text-zinc-100 font-mono text-xs">هر روز ساعت ۸ ورزش #سلامتی</code>
           <div className="mt-1 text-xs text-zinc-400">
-            → عنوان: «ورزش»، موعد: فردا ۸:۰۰، تکرار: هر روز، تگ: سلامتی
+            عنوان: «ورزش»، موعد: فردا ۸:۰۰، تکرار: هر روز، تگ: سلامتی
           </div>
         </div>
       </div>

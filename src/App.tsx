@@ -2,6 +2,7 @@ import { Header } from "@/components/Header.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
+import { Kbd } from "@/components/ui/kbd.tsx";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
@@ -328,8 +329,8 @@ export function App() {
         <Group title="انجام‌شده" tasks={groups.done} {...{ toggle, remove, rename }} />
         {db.tasks.length === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">
-            لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300">پیست</strong> از AI دیتای
-            جدید وارد کنید یا با کلید <strong className="text-zinc-300">/</strong> تسک بنویسید.
+            لیست تسک‌ها خالی است. با دکمه <strong className="text-zinc-300 font-medium">پیست</strong>{" "}
+            از AI دیتای جدید وارد کنید یا با کلید <Kbd size="xs">/</Kbd> تسک بنویسید.
           </p>
         )}
       </main>
