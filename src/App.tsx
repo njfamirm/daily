@@ -390,7 +390,12 @@ export function App() {
       </main>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/80 pt-4">
-        <SyncBar db={db} onReplace={setDb} onMessage={showToast} />
+        <SyncBar
+          db={db}
+          onReplace={setDb}
+          onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
+          onMessage={showToast}
+        />
         <span className="text-xs text-zinc-400">همه‌چیز آفلاین روی مرورگر شما ذخیره می‌شود.</span>
       </footer>
 

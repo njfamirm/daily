@@ -78,6 +78,7 @@ export function normalizeDB(raw: unknown): DB {
       checkIntervalSec: Math.min(3600, Math.max(5, Math.round(interval))),
       leadMinutes: Math.min(1440, Math.max(0, Math.round(lead))),
     },
+    aiMemory: str(d.aiMemory, "").trim(),
     notes: (Array.isArray(d.notes) ? d.notes : [])
       .map(normalizeNote)
       .filter((n): n is Note => n !== null),

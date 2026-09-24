@@ -41,6 +41,8 @@ export interface Settings {
 export interface DB {
   version: 1;
   settings: Settings;
+  /** حافظه و دستورالعمل‌های پایدار برای هوش مصنوعی */
+  aiMemory?: string;
   notes: Note[];
   tasks: Task[];
 }
@@ -53,6 +55,7 @@ export const DEFAULT_DB: DB = {
     checkIntervalSec: 15,
     leadMinutes: 0,
   },
+  aiMemory: "",
   notes: [],
   tasks: [],
 };
