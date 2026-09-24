@@ -4,6 +4,8 @@ import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
 import { fireConfettiAt } from "@/lib/confetti.ts";
+import { UpdateDialog } from "@/components/UpdateDialog.tsx";
+import { initNotificationChannel, syncAllTaskNotifications } from "@/lib/notifications.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
@@ -95,6 +97,16 @@ export function App() {
     setToast({ text, undo });
     setTimeout(() => setToast(null), undo ? 8000 : 3000);
   };
+
+  // راه‌اندازی کانال نوتیفیکیشن بومی با اولویت بالا و صدای زنگ در صفحه قفل
+  useEffect(() => {
+    void initNotificationChannel();
+  }, []);
+
+  // همگام‌سازی نوتیفیکیشن‌های بومی دستگاه با تسک‌ها
+  useEffect(() => {
+    void syncAllTaskNotifications(db.tasks);
+  }, [db.tasks]);
 
   // موتور یادآوری
   useEffect(() => {
@@ -575,6 +587,9 @@ export function App() {
           )}
         </div>
       )}
+
+      {/* دیالوگ به‌روزرسانی خودکار درون‌برنامه‌ای */}
+      <UpdateDialog />
     </div>
   );
 }

@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -35,6 +37,15 @@ jobs:
           node-version: "22"
           cache: true
 
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Install dependencies
         run: vp install
 
@@ -44,8 +55,115 @@ jobs:
       - name: Run unit tests
         run: vp test --run
 
-      - name: Build application
+      - name: Build web application
         run: vp run build
+
+      - name: Sync Capacitor Android
+        run: pnpm exec cap sync android
+
+      - name: Resolve version
+        id: version
+        run: |
+          code="${{ github.run_number }}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            name="${GITHUB_REF#refs/tags/v}"
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            name="1.0.${code}-nightly"
+            tag="nightly"
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Signing Keystore
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          keystore_path="$RUNNER_TEMP/taskdrop-release.p12"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$keystore_path"
+            echo "keystore_path=$keystore_path" >> "$GITHUB_OUTPUT"
+            echo "keystore_pass=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
+            echo "key_alias=$KEY_ALIAS" >> "$GITHUB_OUTPUT"
+            echo "key_pass=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+          else
+            echo "Generating fallback CI signing keystore..."
+            keytool -genkeypair -v -keystore "$keystore_path" \
+              -storetype PKCS12 -storepass "taskdrop_pass" \
+              -alias "taskdrop" -keypass "taskdrop_pass" \
+              -dname "CN=TaskDrop, OU=App, O=TaskDrop, L=Tehran, S=Tehran, C=IR" \
+              -validity 10000 -keyalg RSA -keysize 2048
+            echo "keystore_path=$keystore_path" >> "$GITHUB_OUTPUT"
+            echo "keystore_pass=taskdrop_pass" >> "$GITHUB_OUTPUT"
+            echo "key_alias=taskdrop" >> "$GITHUB_OUTPUT"
+            echo "key_pass=taskdrop_pass" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Assemble Android Release APK
+        working-directory: android
+        env:
+          TASKDROP_VERSION_CODE: ${{ steps.version.outputs.code }}
+          TASKDROP_VERSION_NAME: ${{ steps.version.outputs.name }}
+          TASKDROP_KEYSTORE_PATH: ${{ steps.keystore.outputs.keystore_path }}
+          TASKDROP_KEYSTORE_PASSWORD: ${{ steps.keystore.outputs.keystore_pass }}
+          TASKDROP_KEY_ALIAS: ${{ steps.keystore.outputs.key_alias }}
+          TASKDROP_KEY_PASSWORD: ${{ steps.keystore.outputs.key_pass }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Collect Release Artifacts & Generate In-App Update Manifest
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk release/taskdrop.apk
+          cat > release/update.json <<JSON
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${VERSION_NAME}",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/download/${TAG}/taskdrop.apk",
+            "releasedAt": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          }
+          JSON
+          ls -lh release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskdrop-release-apk
+          path: release/
+          retention-days: 14
+
+      - name: Publish Nightly GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: "TaskDrop Nightly Build"
+          prerelease: true
+          files: |
+            release/taskdrop.apk
+            release/update.json
+          body: |
+            🚀 **TaskDrop Nightly Release**
+            - Commit: `${{ github.sha }}`
+            - Version: `${{ steps.version.outputs.name }}` (Build `${{ steps.version.outputs.code }}`)
+            - In-App Update Manifest included.
+
+      - name: Publish Tagged GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/taskdrop.apk
+            release/update.json
+          generate_release_notes: true
 
       - name: Deploy to Cloudflare Workers
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}

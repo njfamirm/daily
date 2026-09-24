@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- تیک ضخیم و صیقلی سفید -->
+  <path
+    d="M 178 256 L 236 314 L 334 186"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="48"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- نقطه زرد قناری شاخص روی راس تیک -->
+  <circle cx="236" cy="314" r="14" fill="#facc15" />
+</svg>
+

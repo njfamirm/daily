@@ -20,11 +20,17 @@ export function resolveEffectiveServerUrl(serverUrl?: string): string {
   if (serverUrl && serverUrl.trim()) return serverUrl.trim();
   if (typeof window !== "undefined" && window.location.origin) {
     const origin = window.location.origin;
-    if (!origin.includes("github.io")) {
-      return origin;
+    if (
+      origin.includes("localhost") ||
+      origin.startsWith("capacitor://") ||
+      origin.startsWith("ionic://") ||
+      origin.includes("github.io")
+    ) {
+      return "https://task.njfamirm.ir";
     }
+    return origin;
   }
-  return "";
+  return "https://task.njfamirm.ir";
 }
 
 export function loadSyncConfig(): SyncConfig {

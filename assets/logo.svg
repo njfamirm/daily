@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- الگوی ماتریس نقطه‌ای در پس‌زمینه -->
+    <pattern id="dot-grid" x="0" y="0" width="64" height="64" patternUnits="userSpaceOnUse">
+      <circle cx="32" cy="32" r="3" fill="#52525b" fill-opacity="0.4" />
+    </pattern>
+    <radialGradient id="subtle-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#27272a" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#141417" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- پس‌زمینه تیره مدرن با لبه‌های گرد squircle و حاشیه امن -->
+  <rect width="512" height="512" rx="112" fill="#141417"/>
+  <rect width="512" height="512" rx="112" fill="url(#subtle-glow)"/>
+  <rect width="512" height="512" rx="112" fill="none" stroke="#27272a" stroke-width="6"/>
+
+  <!-- لایه ماتریس نقطه‌ای -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#dot-grid)"/>
+
+  <!-- تیک ضخیم و صیقلی سفید -->
+  <path
+    d="M 188 266 L 244 322 L 344 198"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="44"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- نقطه زرد قناری شاخص روی راس تیک -->
+  <circle cx="244" cy="322" r="11" fill="#facc15" />
+</svg>
