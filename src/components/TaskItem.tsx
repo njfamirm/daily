@@ -3,10 +3,12 @@ import { formatDue } from "@/lib/parse.ts";
 import { getTagStyle, PRIORITY_CONFIG } from "@/lib/tags.ts";
 import type { Task } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
-import { Check, Flame, Repeat2, Trash2 } from "lucide-react";
+import { AlarmClock, Check, Flame, Repeat2, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 const REPEAT_LABEL = { daily: "هر روز", weekly: "هر هفته", monthly: "هر ماه", none: "" };
+
+export type SnoozePreset = "15m" | "1h" | "tomorrow" | "weekend";
 
 interface Props {
   task: Task;
@@ -14,10 +16,12 @@ interface Props {
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onTagClick?: (tag: string) => void;
+  onSnooze?: (id: string, preset: SnoozePreset) => void;
 }
 
-export function TaskItem({ task, onToggle, onDelete, onRename, onTagClick }: Props) {
+export function TaskItem({ task, onToggle, onDelete, onRename, onTagClick, onSnooze }: Props) {
   const [editing, setEditing] = useState(false);
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
   const overdue = !task.done && task.due !== null && new Date(task.due).getTime() <= Date.now();
   const priority = task.priority || "none";
   const priorityCfg = PRIORITY_CONFIG[priority];
@@ -127,15 +131,93 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onTagClick }: Pro
         </div>
       </div>
 
-      <Button
-        variant="danger"
-        size="icon"
-        aria-label="حذف"
-        onClick={() => onDelete(task.id)}
-        className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-      >
-        <Trash2 />
-      </Button>
+      {/* دکمه‌های کناری: تعویق و حذف */}
+      <div className="relative flex items-center gap-1">
+        {!task.done && onSnooze && (
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="تعویق موعد"
+              title="تعویق هوشمند (Snooze)"
+              onClick={() => setSnoozeOpen((prev) => !prev)}
+              className={cn(
+                "transition-opacity",
+                overdue
+                  ? "text-amber-400 hover:text-amber-300"
+                  : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-zinc-400",
+              )}
+            >
+              <AlarmClock className="size-4" />
+            </Button>
+
+            {snoozeOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSnoozeOpen(false)} />
+                <div className="absolute end-0 top-full z-50 mt-1.5 w-40 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900/95 p-1 text-xs shadow-xl backdrop-blur-md">
+                  <div className="px-2 py-1 text-[10px] font-medium text-zinc-500 border-b border-zinc-800">
+                    تعویق موعد به:
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSnooze(task.id, "15m");
+                      setSnoozeOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                  >
+                    <span>+۱۵ دقیقه</span>
+                    <span className="text-[10px] text-zinc-500">15m</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSnooze(task.id, "1h");
+                      setSnoozeOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                  >
+                    <span>+۱ ساعت</span>
+                    <span className="text-[10px] text-zinc-500">1h</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSnooze(task.id, "tomorrow");
+                      setSnoozeOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                  >
+                    <span>فردا ۸:۳۰ صبح</span>
+                    <span className="text-[10px] text-zinc-500">فردا</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSnooze(task.id, "weekend");
+                      setSnoozeOpen(false);
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                  >
+                    <span>شنبه بعد ۹:۰۰</span>
+                    <span className="text-[10px] text-zinc-500">شنبه</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <Button
+          variant="danger"
+          size="icon"
+          aria-label="حذف"
+          onClick={() => onDelete(task.id)}
+          className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <Trash2 />
+        </Button>
+      </div>
     </div>
   );
 }

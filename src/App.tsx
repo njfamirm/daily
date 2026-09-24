@@ -1,15 +1,17 @@
+import { DailyDigestModal } from "@/components/DailyDigestModal.tsx";
 import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { SyncBar } from "@/components/SyncBar.tsx";
-import { TaskItem } from "@/components/TaskItem.tsx";
+import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
+import { WeeklyStreak } from "@/components/WeeklyStreak.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
-import { Bell, BellOff, HelpCircle, Volume2, VolumeX } from "lucide-react";
+import { Bell, BellOff, FileText, HelpCircle, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string {
@@ -24,11 +26,31 @@ function nextDue(iso: string, repeat: Task["repeat"], from = new Date()): string
   return d.toISOString();
 }
 
+function computeSnoozeTime(preset: SnoozePreset): string {
+  const d = new Date();
+  if (preset === "15m") {
+    d.setMinutes(d.getMinutes() + 15);
+  } else if (preset === "1h") {
+    d.setHours(d.getHours() + 1);
+  } else if (preset === "tomorrow") {
+    d.setDate(d.getDate() + 1);
+    d.setHours(8, 30, 0, 0);
+  } else if (preset === "weekend") {
+    const day = d.getDay(); // 0: Sun, 6: Sat
+    let daysUntilSat = (6 - day + 7) % 7;
+    if (daysUntilSat === 0) daysUntilSat = 7;
+    d.setDate(d.getDate() + daysUntilSat);
+    d.setHours(9, 0, 0, 0);
+  }
+  return d.toISOString();
+}
+
 export function App() {
   const { db, setDb, update } = useDB();
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [digestOpen, setDigestOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const firedRef = useRef(false);
 
@@ -119,6 +141,10 @@ export function App() {
           setHelpOpen(false);
           return;
         }
+        if (digestOpen) {
+          setDigestOpen(false);
+          return;
+        }
         if (selectedTag) {
           setSelectedTag(null);
           return;
@@ -164,7 +190,7 @@ export function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [db.settings.sound, db.settings.notifications, helpOpen, selectedTag, toast]);
+  }, [db.settings.sound, db.settings.notifications, helpOpen, digestOpen, selectedTag, toast]);
 
   const addTask = (raw: string) => {
     const p = parseInput(raw);
@@ -205,6 +231,24 @@ export function App() {
     const before = db;
     update((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => t.id !== id) }));
     showToast("حذف شد", () => setDb(before));
+  };
+
+  const snooze = (id: string, preset: SnoozePreset) => {
+    const before = db;
+    const targetIso = computeSnoozeTime(preset);
+    update((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === id ? { ...t, due: targetIso, notifiedAt: null, done: false } : t,
+      ),
+    }));
+    const presetLabels: Record<SnoozePreset, string> = {
+      "15m": "۱۵ دقیقه",
+      "1h": "۱ ساعت",
+      tomorrow: "فردا ۸:۳۰ صبح",
+      weekend: "شنبه ۹:۰۰ صبح",
+    };
+    showToast(`موعد تسک به تعویق افتاد (${presetLabels[preset]})`, () => setDb(before));
   };
 
   const rename = (id: string, title: string) =>
@@ -274,6 +318,15 @@ export function App() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="گزارش روزانه"
+              title="گزارش روزانه (Daily Digest)"
+              onClick={() => setDigestOpen(true)}
+            >
+              <FileText />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label="راهنما"
               title="راهنما و کلیدهای میانبر (؟)"
               onClick={() => setHelpOpen(true)}
@@ -315,6 +368,8 @@ export function App() {
       </header>
 
       <QuickAdd onAdd={addTask} />
+
+      <WeeklyStreak tasks={db.tasks} />
 
       {allTags.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 px-1 py-0.5 text-xs">
@@ -368,24 +423,28 @@ export function App() {
           tasks={groups.overdue}
           alert
           onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="امروز"
           tasks={groups.today}
           onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="بعداً"
           tasks={groups.later}
           onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
           title="بدون زمان"
           tasks={groups.someday}
           onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
+          onSnooze={snooze}
           {...{ toggle, remove, rename }}
         />
         <Group
@@ -430,6 +489,12 @@ export function App() {
       )}
 
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <DailyDigestModal
+        open={digestOpen}
+        db={db}
+        onClose={() => setDigestOpen(false)}
+        onMessage={showToast}
+      />
     </div>
   );
 }
@@ -442,6 +507,7 @@ function Group({
   remove,
   rename,
   onTagClick,
+  onSnooze,
 }: {
   title: string;
   tasks: Task[];
@@ -450,6 +516,7 @@ function Group({
   remove: (id: string) => void;
   rename: (id: string, title: string) => void;
   onTagClick?: (tag: string) => void;
+  onSnooze?: (id: string, preset: SnoozePreset) => void;
 }) {
   if (tasks.length === 0) return null;
   return (
@@ -479,6 +546,7 @@ function Group({
             onDelete={remove}
             onRename={rename}
             onTagClick={onTagClick}
+            onSnooze={onSnooze}
           />
         ))}
       </div>
