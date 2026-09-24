@@ -20,6 +20,7 @@ import {
   ClipboardCopy,
   ClipboardPaste,
   Cloud,
+  Download,
   FileText,
   Flame,
   HelpCircle,
@@ -458,6 +459,19 @@ export function Header({
                   <span className="flex-1 text-start">راهنما و کلیدهای میانبر</span>
                   <Kbd size="xs">؟</Kbd>
                 </button>
+
+                <a
+                  href="https://github.com/njfamirm/taskdrop/releases/download/nightly/taskdrop.apk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-amber-300 hover:bg-amber-950/40 hover:text-amber-200 transition-colors"
+                >
+                  <Download className="size-4 text-amber-400" />
+                  <span className="flex-1 text-start font-medium">دانلود نسخه اندروید (APK)</span>
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
+                    جدید
+                  </span>
+                </a>
 
                 {hasDone && (
                   <button
