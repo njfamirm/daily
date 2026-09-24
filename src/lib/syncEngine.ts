@@ -25,10 +25,12 @@ export function mergeDBs(local: DB, incoming: DB): DB {
 
       if (inTime > locTime) {
         taskMap.set(inTask.id, inTask);
+      } else if (locTime > inTime) {
+        taskMap.set(locTask.id, locTask);
       } else {
-        // اگر محلی جدیدتر بود یا برابر بود، فیلدهای تکمیلی حفظ می‌شوند
-        taskMap.set(locTask.id, {
-          ...locTask,
+        // در صورت برابری زمان، وضعیت جدیدتر ورودی با حفظ تگ‌ها و توضیحات ثبت می‌شود
+        taskMap.set(inTask.id, {
+          ...inTask,
           description: inTask.description ?? locTask.description,
           tags: Array.from(new Set([...locTask.tags, ...inTask.tags])),
         });
