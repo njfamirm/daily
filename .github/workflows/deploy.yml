@@ -169,6 +169,9 @@ jobs:
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         run: npx --yes wrangler deploy
         working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
