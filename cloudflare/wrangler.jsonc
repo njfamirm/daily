@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "taskdrop-sync-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-09-23",
+  "kv_namespaces": [
+    {
+      "binding": "VAULTS",
+      "id": "YOUR_KV_NAMESPACE_ID",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

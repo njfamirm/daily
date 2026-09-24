@@ -2,6 +2,7 @@ import { AIMemorySheet } from "@/components/AIMemorySheet.tsx";
 import { DailyDigestModal } from "@/components/DailyDigestModal.tsx";
 import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { StreakModal } from "@/components/StreakModal.tsx";
+import { SyncModal } from "@/components/SyncModal.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
@@ -18,6 +19,7 @@ import {
   Check,
   ClipboardCopy,
   ClipboardPaste,
+  Cloud,
   FileText,
   Flame,
   HelpCircle,
@@ -62,6 +64,7 @@ export function Header({
   const [digestOpen, setDigestOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
 
   const currentTheme: ThemeMode = db.settings.theme || "dark";
@@ -134,7 +137,7 @@ export function Header({
       <div className="flex items-center gap-2.5">
         <div
           className="grid size-9 shrink-0 place-items-center rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-inner overflow-hidden"
-          title="daily"
+          title="TaskDrop"
         >
           <svg viewBox="0 0 100 100" className="size-9">
             <defs>
@@ -368,6 +371,18 @@ export function Header({
                   <span className="flex-1 text-start">آمار و پیوستگی ۷ روزه</span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setSyncOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors"
+                >
+                  <Cloud className="size-4 text-sky-400" />
+                  <span className="flex-1 text-start">همگام‌سازی ابری (E2EE)</span>
+                </button>
+
                 <div className="my-1 border-t border-zinc-800/80" />
 
                 <button
@@ -482,6 +497,14 @@ export function Header({
       />
 
       <StreakModal open={streakOpen} tasks={db.tasks} onClose={() => setStreakOpen(false)} />
+
+      <SyncModal
+        open={syncOpen}
+        db={db}
+        onSyncApply={onReplace}
+        onClose={() => setSyncOpen(false)}
+        onMessage={onMessage}
+      />
 
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
 

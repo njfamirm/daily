@@ -1,7 +1,7 @@
 {
-  "name": "daily",
-  "short_name": "daily",
-  "description": "مدیریت وظایف و یادداشت‌های روزانه متمرکز بر اولویت‌ها",
+  "name": "TaskDrop",
+  "short_name": "TaskDrop",
+  "description": "تخلیه ذهن و مدیریت هوشمند تسک‌ها",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
