@@ -11,6 +11,7 @@
     "video:preview": "remotion preview src/remotion/index.ts",
     "video:render": "remotion render src/remotion/index.ts TaskDropDemo out/demo.mp4",
     "video:still": "remotion still src/remotion/index.ts TaskDropDemo out/thumbnail.png --frame=320"
+    "video:still": "remotion still src/remotion/index.ts TaskDropDemo out/thumbnail.png --frame=320",
   },
   "dependencies": {
     "@fontsource/vazirmatn": "^5.3.0",
