@@ -4,8 +4,10 @@ export type Priority = "none" | "low" | "medium" | "high";
 export interface Task {
   /** شناسه یکتا */
   id: string;
-  /** متن تعهد */
+  /** متن اصلی و کوتاه تعهد */
   title: string;
+  /** توضیحات تکمیلی و جزئیات (فقط در صورت ضرورت) */
+  description?: string | null;
   /** زمان یادآوری، ISO 8601 با تایم‌زون محلی؛ null یعنی بدون زمان */
   due: string | null;
   /** تکرار خودکار بعد از انجام‌شدن/سررسید */

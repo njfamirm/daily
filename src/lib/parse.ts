@@ -2,6 +2,7 @@ import type { Priority, Repeat } from "@/lib/types.ts";
 
 export interface Parsed {
   title: string;
+  description?: string | null;
   due: Date | null;
   repeat: Repeat;
   priority: Priority;
@@ -81,6 +82,13 @@ function startOfDay(d: Date) {
  * مثال: «دوشنبه هفته بعد ساعت ۱۰ کوک کنم !فوری #کار» یا «+۲ ساعت دیگه چک کن آپدیت رو».
  */
 export function parseInput(input: string, now = new Date()): Parsed {
+  let description: string | null = null;
+  if (input.includes("//")) {
+    const parts = input.split("//");
+    input = parts[0];
+    description = parts.slice(1).join("//").trim() || null;
+  }
+
   let s = normalize(input);
   const tags: string[] = [];
 
@@ -247,7 +255,7 @@ export function parseInput(input: string, now = new Date()): Parsed {
     if (due.getTime() <= now.getTime()) due = new Date(due.getTime() + 864e5);
   }
 
-  return { title: clean(s), due, repeat, priority, tags };
+  return { title: clean(s), description, due, repeat, priority, tags };
 }
 
 function clean(s: string) {

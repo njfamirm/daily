@@ -32,11 +32,14 @@ function normalizeTask(raw: unknown): Task | null {
   const t = raw as Record<string, unknown>;
   const title = str(t.title).trim();
   if (!title) return null;
+  const description =
+    typeof t.description === "string" && t.description.trim() ? t.description.trim() : null;
   const repeat = REPEATS.includes(t.repeat as Repeat) ? (t.repeat as Repeat) : "none";
   const priority = PRIORITIES.includes(t.priority as Priority) ? (t.priority as Priority) : "none";
   return {
     id: str(t.id) || uid(),
     title,
+    description,
     due: isoOrNull(t.due),
     repeat,
     priority,

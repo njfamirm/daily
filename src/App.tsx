@@ -170,6 +170,7 @@ export function App() {
     const task: Task = {
       id: uid(),
       title: p.title,
+      description: p.description || null,
       due: p.due ? p.due.toISOString() : null,
       repeat: p.repeat,
       priority: p.priority,
@@ -223,10 +224,18 @@ export function App() {
     showToast(`موعد تسک به تعویق افتاد (${presetLabels[preset]})`, () => setDb(before));
   };
 
-  const rename = (id: string, title: string) =>
+  const rename = (id: string, title: string, description?: string | null) =>
     update((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => (t.id === id ? { ...t, title: title.trim() || t.title } : t)),
+      tasks: prev.tasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              title: title.trim() || t.title,
+              description: description !== undefined ? description : t.description,
+            }
+          : t,
+      ),
     }));
 
   const clearDone = () => {
@@ -360,7 +369,7 @@ function Group({
   alert?: boolean;
   toggle: (id: string) => void;
   remove: (id: string) => void;
-  rename: (id: string, title: string) => void;
+  rename: (id: string, title: string, description?: string | null) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
 }) {
   if (tasks.length === 0) return null;

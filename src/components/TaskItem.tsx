@@ -14,7 +14,7 @@ interface Props {
   task: Task;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onRename: (id: string, title: string) => void;
+  onRename: (id: string, title: string, description?: string | null) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
 }
 
@@ -53,45 +53,61 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
 
       <div className="min-w-0 flex-1">
         {editing ? (
-          <input
-            autoFocus
-            defaultValue={task.title}
-            className="w-full rounded-lg bg-zinc-800/95 px-2 py-1 text-base font-medium text-zinc-100 outline-none ring-2 ring-zinc-400"
-            onBlur={(e) => {
-              onRename(task.id, e.target.value);
-              setEditing(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-              if (e.key === "Escape") setEditing(false);
-            }}
-          />
+          <div className="space-y-1.5">
+            <input
+              autoFocus
+              defaultValue={task.title}
+              placeholder="عنوان تسک…"
+              className="w-full rounded-lg bg-zinc-800/95 px-2 py-1 text-base font-medium text-zinc-100 outline-none ring-2 ring-zinc-400"
+              onBlur={(e) => {
+                onRename(task.id, e.target.value, task.description);
+                setEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") setEditing(false);
+              }}
+            />
+          </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className={cn(
-                "block text-start text-base sm:text-lg leading-snug transition-colors cursor-text",
-                task.done
-                  ? "text-zinc-500 line-through font-normal text-sm"
-                  : priority === "high"
-                    ? "text-white font-bold tracking-tight"
-                    : "text-zinc-100 font-semibold hover:text-white",
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className={cn(
+                  "block text-start text-base sm:text-lg leading-snug transition-colors cursor-text",
+                  task.done
+                    ? "text-zinc-500 line-through font-normal text-sm"
+                    : priority === "high"
+                      ? "text-white font-bold tracking-tight"
+                      : "text-zinc-100 font-semibold hover:text-white",
+                )}
+              >
+                {task.title}
+              </button>
+              {priority === "high" && !task.done && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-700/90 bg-red-900/80 px-2 py-0.5 text-xs font-bold text-red-100 shadow-xs">
+                  <Flame className="size-3.5 text-red-300 fill-red-400/30" />
+                  فوری
+                </span>
               )}
-            >
-              {task.title}
-            </button>
-            {priority === "high" && !task.done && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-700/90 bg-red-900/80 px-2 py-0.5 text-xs font-bold text-red-100 shadow-xs">
-                <Flame className="size-3.5 text-red-300 fill-red-400/30" />
-                فوری
-              </span>
-            )}
-            {priority === "medium" && !task.done && (
-              <span className="inline-flex shrink-0 items-center rounded-md border border-amber-800/80 bg-amber-950/80 px-1.5 py-0.5 text-[11px] font-medium text-amber-300">
-                متوسط
-              </span>
+              {priority === "medium" && !task.done && (
+                <span className="inline-flex shrink-0 items-center rounded-md border border-amber-800/80 bg-amber-950/80 px-1.5 py-0.5 text-[11px] font-medium text-amber-300">
+                  متوسط
+                </span>
+              )}
+            </div>
+
+            {task.description && task.description.trim() && (
+              <p
+                className={cn(
+                  "mt-1 text-xs sm:text-[13px] leading-relaxed transition-colors",
+                  task.done ? "text-zinc-600 line-through" : "text-zinc-400 font-normal",
+                )}
+              >
+                {task.description}
+              </p>
             )}
           </div>
         )}
