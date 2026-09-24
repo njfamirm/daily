@@ -62,8 +62,14 @@ export const COLOR_PRESETS: ColorPreset[] = [
 
 export function applyTheme(theme: ThemeMode = "dark", color: PrimaryColor = "yellow") {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark");
-  root.classList.toggle("light", theme === "light");
-  root.setAttribute("data-theme", theme);
+
+  let resolved = theme;
+  if (theme === "auto") {
+    resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  root.classList.toggle("dark", resolved === "dark");
+  root.classList.toggle("light", resolved === "light");
+  root.setAttribute("data-theme", resolved);
   root.setAttribute("data-color", color);
 }

@@ -1,6 +1,6 @@
 export type Repeat = "none" | "daily" | "weekly" | "monthly";
 export type Priority = "none" | "low" | "medium" | "high";
-export type ThemeMode = "dark" | "light";
+export type ThemeMode = "dark" | "light" | "auto";
 export type PrimaryColor = "yellow" | "emerald" | "violet" | "blue" | "rose" | "orange";
 
 export interface Task {

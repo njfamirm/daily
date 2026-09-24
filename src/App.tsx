@@ -3,7 +3,7 @@ import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
 import { type SnoozePreset, TaskItem } from "@/components/TaskItem.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
-import { fireConfetti } from "@/lib/confetti.ts";
+import { fireConfettiAt } from "@/lib/confetti.ts";
 import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Task } from "@/lib/types.ts";
@@ -202,11 +202,11 @@ export function App() {
     update((prev) => ({ ...prev, tasks: [task, ...prev.tasks] }));
   };
 
-  const toggle = (id: string) =>
+  const toggle = (id: string, event?: React.MouseEvent) =>
     update((prev) => {
       const target = prev.tasks.find((t) => t.id === id);
       if (target && !target.done) {
-        fireConfetti();
+        fireConfettiAt(event);
       }
       return {
         ...prev,
@@ -541,7 +541,7 @@ function Group({
   icon?: React.ReactNode;
   tasks: Task[];
   alert?: boolean;
-  toggle: (id: string) => void;
+  toggle: (id: string, event?: React.MouseEvent) => void;
   remove: (id: string) => void;
   rename: (id: string, title: string, description?: string | null) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;

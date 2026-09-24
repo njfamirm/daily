@@ -21,6 +21,7 @@ import {
   FileText,
   Flame,
   HelpCircle,
+  Laptop,
   Moon,
   MoreVertical,
   Palette,
@@ -82,12 +83,6 @@ export function Header({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [menuOpen]);
-
-  const toggleTheme = () => {
-    const nextTheme: ThemeMode = currentTheme === "dark" ? "light" : "dark";
-    onUpdateSetting("theme", nextTheme);
-    onMessage(nextTheme === "dark" ? "تم تاریک فعال شد" : "تم روشن فعال شد");
-  };
 
   const selectPrimaryColor = (color: PrimaryColor) => {
     onUpdateSetting("primaryColor", color);
@@ -177,22 +172,6 @@ export function Header({
 
       {/* دکمه‌های اصلی هدر */}
       <div className="flex items-center gap-2">
-        {/* دکمه سوییچ تم روشن/تاریک */}
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={currentTheme === "dark" ? "سوییچ به تم روشن" : "سوییچ به تم تاریک"}
-          title={currentTheme === "dark" ? "سوییچ به تم روشن" : "سوییچ به تم تاریک"}
-          onClick={toggleTheme}
-          className="text-zinc-400 hover:text-zinc-100"
-        >
-          {currentTheme === "dark" ? (
-            <Sun className="size-4 text-amber-400" />
-          ) : (
-            <Moon className="size-4 text-sky-400" />
-          )}
-        </Button>
-
         {/* دکمه برجسته کپی برای AI */}
         <Button
           variant="outline"
@@ -256,6 +235,68 @@ export function Header({
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
               <div className="absolute end-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 p-2 text-xs shadow-2xl backdrop-blur-md">
+                {/* سوییچ سه‌حالته تم: تاریک / روشن / خودکار */}
+                <div className="mb-2 px-2 py-1">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-zinc-400">
+                    <span className="flex items-center gap-1.5">
+                      <Sun className="size-3.5 text-amber-400" />
+                      حالت تم
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-900/80 p-1 border border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateSetting("theme", "dark");
+                        onMessage("تم تاریک فعال شد");
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                        currentTheme === "dark"
+                          ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Moon className="size-3 text-sky-400" />
+                      <span>تاریک</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateSetting("theme", "light");
+                        onMessage("تم روشن فعال شد");
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                        currentTheme === "light"
+                          ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Sun className="size-3 text-amber-400" />
+                      <span>روشن</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateSetting("theme", "auto");
+                        onMessage("تم خودکار سیستم فعال شد");
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                        currentTheme === "auto"
+                          ? "bg-zinc-800 text-zinc-100 shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Laptop className="size-3 text-emerald-400" />
+                      <span>خودکار</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="my-1 border-t border-zinc-800/80" />
+
                 {/* انتخاب پالت رنگ پرایمری */}
                 <div className="mb-2 px-2 py-1">
                   <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-zinc-400">

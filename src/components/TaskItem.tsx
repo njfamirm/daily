@@ -12,7 +12,7 @@ export type SnoozePreset = "15m" | "1h" | "tomorrow" | "weekend";
 
 interface Props {
   task: Task;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, event?: React.MouseEvent) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string, description?: string | null) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
@@ -41,7 +41,7 @@ export function TaskItem({ task, onToggle, onDelete, onRename, onSnooze }: Props
       <button
         type="button"
         aria-label={task.done ? "برگردان" : "انجام شد"}
-        onClick={() => onToggle(task.id)}
+        onClick={(e) => onToggle(task.id, e)}
         className={cn(
           "grid size-6 shrink-0 place-items-center rounded-lg border border-zinc-600 bg-zinc-800/80 transition-all hover:border-zinc-200 hover:scale-105 active:scale-95 cursor-pointer",
           task.done && "border-white bg-white text-black",

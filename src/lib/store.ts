@@ -80,7 +80,7 @@ export function normalizeDB(raw: unknown): DB {
       notifications: bool(s.notifications, true),
       checkIntervalSec: Math.min(3600, Math.max(5, Math.round(interval))),
       leadMinutes: Math.min(1440, Math.max(0, Math.round(lead))),
-      theme: s.theme === "light" ? "light" : "dark",
+      theme: s.theme === "light" ? "light" : s.theme === "auto" ? "auto" : "dark",
       primaryColor:
         s.primaryColor === "emerald" ||
         s.primaryColor === "violet" ||
