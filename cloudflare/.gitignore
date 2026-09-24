@@ -1,4 +1,6 @@
 .wrangler/
 .dev.vars
+*.local.*
+local.secrets.json
 node_modules/
 dist/
