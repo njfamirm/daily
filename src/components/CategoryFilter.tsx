@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge.tsx";
 import { parseTag } from "@/lib/tags.ts";
 import type { Language, Task } from "@/lib/types.ts";
 import { X } from "lucide-react";
@@ -29,7 +30,7 @@ export function CategoryFilter({ activeCategory, lang = "fa", onSelectCategory }
         <span className="text-zinc-400 text-xs font-medium">
           {isFa ? "فیلتر فعال:" : "Active Filter:"}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+        <Badge variant="warning" className="gap-1.5 font-semibold">
           {parsed.isScoped ? (
             <span>
               <span className="opacity-60 font-normal">#{parsed.key}:</span>
@@ -46,7 +47,7 @@ export function CategoryFilter({ activeCategory, lang = "fa", onSelectCategory }
           >
             <X className="size-3" />
           </button>
-        </span>
+        </Badge>
       </div>
 
       <button

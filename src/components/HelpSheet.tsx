@@ -1,9 +1,17 @@
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
 import { getTranslation } from "@/lib/i18n.ts";
 import type { Language } from "@/lib/types.ts";
-import { Calendar, Clock, Flame, Keyboard, Repeat, Tag, X } from "lucide-react";
-import { useEffect } from "react";
+import { Calendar, Clock, Flame, Keyboard, Repeat, Tag } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface Row {
   pattern: string;
@@ -18,6 +26,13 @@ interface ShortcutRow {
 const SHORTCUT_ROWS_FA: ShortcutRow[] = [
   { shortcuts: [["/"], ["N"]], meaning: "فوکوس روی فیلد ثبت تسک جدید" },
   { shortcuts: [["؟"], ["Shift", "/"]], meaning: "باز کردن راهنما و کلیدهای میانبر" },
+  {
+    shortcuts: [
+      ["⌘", ","],
+      ["Ctrl", ","],
+    ],
+    meaning: "باز کردن پنجره تنظیمات برنامه",
+  },
   { shortcuts: [["M"]], meaning: "افزودن نکته جدید در بخش جلوی چشم" },
   { shortcuts: [["S"]], meaning: "قطع و وصل صدای زنگ" },
   { shortcuts: [["B"]], meaning: "فعال و غیرفعال‌سازی نوتیفیکیشن" },
@@ -34,6 +49,13 @@ const SHORTCUT_ROWS_FA: ShortcutRow[] = [
 const SHORTCUT_ROWS_EN: ShortcutRow[] = [
   { shortcuts: [["/"], ["N"]], meaning: "Focus Quick Add input field" },
   { shortcuts: [["?"], ["Shift", "/"]], meaning: "Open help and keyboard shortcuts" },
+  {
+    shortcuts: [
+      ["⌘", ","],
+      ["Ctrl", ","],
+    ],
+    meaning: "Open application settings",
+  },
   { shortcuts: [["M"]], meaning: "Add a pinned focus note" },
   { shortcuts: [["S"]], meaning: "Toggle alarm sound" },
   { shortcuts: [["B"]], meaning: "Toggle notifications" },
@@ -48,13 +70,13 @@ const SHORTCUT_ROWS_EN: ShortcutRow[] = [
 ];
 
 const PRIORITY_ROWS_FA: Row[] = [
-  { pattern: "!فوری / !مهم / فوری / ضروری", meaning: "اولویت بالا با نوار و نشانگر قرمز" },
-  { pattern: "!متوسط / اولویت متوسط", meaning: "اولویت متوسط با نوار نارنجی" },
-  { pattern: "!کم / سر فرصت / هر وقت شد", meaning: "اولویت پایین با نوار آبی" },
+  { pattern: "!فوری / !مهم / فوری / ضروری", meaning: "اولویت بالا با نشانگر قرمز" },
+  { pattern: "!متوسط / اولویت متوسط", meaning: "اولویت متوسط با نشانگر نارنجی" },
+  { pattern: "!کم / سر فرصت / هر وقت شد", meaning: "اولویت پایین با نشانگر آبی" },
 ];
 
 const PRIORITY_ROWS_EN: Row[] = [
-  { pattern: "!urgent / !high / !p1", meaning: "High priority with glowing red accent" },
+  { pattern: "!urgent / !high / !p1", meaning: "High priority with red accent" },
   { pattern: "!medium / !med / !p2", meaning: "Medium priority with amber badge" },
   { pattern: "!low / !p3", meaning: "Low priority with subtle blue indicator" },
 ];
@@ -98,13 +120,13 @@ const REPEAT_ROWS_EN: Row[] = [
 ];
 
 const OTHER_ROWS_FA: Row[] = [
-  { pattern: "#کار / #پروژه / #خرید / #شخصی", meaning: "برچسب‌های رنگی" },
+  { pattern: "#کار / #پروژه / #شخصی", meaning: "برچسب‌ها و حوزه‌ها (#key:value)" },
   { pattern: "// توضیحات بیشتر", meaning: "توضیحات و جزئیات تکمیلی تسک" },
   { pattern: "بدون هیچ‌کدام از بالا", meaning: "ثبت تسک ساده بدون موعد" },
 ];
 
 const OTHER_ROWS_EN: Row[] = [
-  { pattern: "#work / #project / #finance", meaning: "Color-coded tags" },
+  { pattern: "#work / #project / #personal", meaning: "Tags and scopes (#key:value)" },
   { pattern: "// meeting notes / link", meaning: "Secondary details and links" },
   { pattern: "No keywords", meaning: "Simple floating task without deadline" },
 ];
@@ -116,7 +138,7 @@ function ShortcutsTable({
   orText,
 }: {
   title: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   rows: ShortcutRow[];
   orText: string;
 }) {
@@ -158,7 +180,7 @@ function ShortcutsTable({
   );
 }
 
-function Table({ title, icon, rows }: { title: string; icon?: React.ReactNode; rows: Row[] }) {
+function Table({ title, icon, rows }: { title: string; icon?: ReactNode; rows: Row[] }) {
   return (
     <div>
       <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
@@ -196,15 +218,6 @@ export function HelpSheet({ open, lang = "fa", onClose }: Props) {
   const t = getTranslation(lang);
   const isFa = lang === "fa";
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   const shortcutRows = isFa ? SHORTCUT_ROWS_FA : SHORTCUT_ROWS_EN;
   const priorityRows = isFa ? PRIORITY_ROWS_FA : PRIORITY_ROWS_EN;
   const dateRows = isFa ? DATE_ROWS_FA : DATE_ROWS_EN;
@@ -213,63 +226,59 @@ export function HelpSheet({ open, lang = "fa", onClose }: Props) {
   const otherRows = isFa ? OTHER_ROWS_FA : OTHER_ROWS_EN;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xs"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between border-b border-zinc-800/80 pb-3">
-          <h2 className="text-base font-semibold text-zinc-100">{t.helpTitle}</h2>
-          <Button variant="ghost" size="icon" aria-label={t.close} onClick={onClose}>
-            <X />
-          </Button>
-        </div>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent onClose={onClose} className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t.helpTitle}</DialogTitle>
+          <DialogDescription>{t.helpIntro}</DialogDescription>
+        </DialogHeader>
 
-        <p className="mb-4 text-xs leading-6 text-zinc-300">{t.helpIntro}</p>
-
-        <div className="space-y-4">
+        <div className="max-h-[60vh] overflow-y-auto space-y-4 pe-1">
           <ShortcutsTable
             title={t.helpShortcutsTitle}
-            icon={<Keyboard className="size-4 text-indigo-400" />}
+            icon={<Keyboard className="size-4 text-zinc-400" />}
             rows={shortcutRows}
             orText={t.helpOr}
           />
           <Table
             title={t.helpPriorityTitle}
-            icon={<Flame className="size-4 text-red-400" />}
+            icon={<Flame className="size-4 text-zinc-400" />}
             rows={priorityRows}
           />
           <Table
             title={t.helpDateTitle}
-            icon={<Calendar className="size-4 text-emerald-400" />}
+            icon={<Calendar className="size-4 text-zinc-400" />}
             rows={dateRows}
           />
           <Table
             title={t.helpTimeTitle}
-            icon={<Clock className="size-4 text-cyan-400" />}
+            icon={<Clock className="size-4 text-zinc-400" />}
             rows={timeRows}
           />
           <Table
             title={t.helpRepeatTitle}
-            icon={<Repeat className="size-4 text-purple-400" />}
+            icon={<Repeat className="size-4 text-zinc-400" />}
             rows={repeatRows}
           />
           <Table
             title={t.helpTagsTitle}
-            icon={<Tag className="size-4 text-amber-400" />}
+            icon={<Tag className="size-4 text-zinc-400" />}
             rows={otherRows}
           />
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 text-sm">
+            <div className="mb-1 text-xs font-semibold text-zinc-400">{t.helpExampleTitle}</div>
+            <code className="text-zinc-100 font-mono text-xs">{t.helpExampleText}</code>
+            <div className="mt-1 text-xs text-zinc-400">{t.helpExampleExplanation}</div>
+          </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 text-sm">
-          <div className="mb-1 text-xs font-semibold text-zinc-400">{t.helpExampleTitle}</div>
-          <code className="text-zinc-100 font-mono text-xs">{t.helpExampleText}</code>
-          <div className="mt-1 text-xs text-zinc-400">{t.helpExampleExplanation}</div>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            {t.close}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

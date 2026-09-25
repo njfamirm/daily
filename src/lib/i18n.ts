@@ -40,7 +40,7 @@ export const translations = {
     aiMemoryUpdated: "حافظه هوش مصنوعی به‌روزرسانی شد",
     dailyDigest: "گزارش روزانه",
     weeklyStreak: "آمار و پیوستگی ۷ روزه",
-    cloudSync: "همگام‌سازی ابری (E2EE)",
+    cloudSync: "همگام‌سازی ابری",
     notifications: "نوتیفیکیشن مرورگر",
     notifOn: "روشن",
     notifOff: "خاموش",
@@ -174,7 +174,7 @@ export const translations = {
     dayTasksTooltip: (label: string, count: number) => `${label}: ${count} تسک انجام شده`,
 
     // Sync Modal
-    syncTitle: "همگام‌سازی ابری TaskDrop (E2EE)",
+    syncTitle: "همگام‌سازی ابری TaskDrop",
     syncSubtitle: "سینک ایمن دوطرفه با رمزنگاری سرتاسری ۲۵۶ بیتی روی دستگاه شما",
     syncQuickPair: "اتصال سریع بین دستگاه‌ها",
     syncShowQr: "نمایش بارکد اتصال سریع",
@@ -297,7 +297,7 @@ export const translations = {
     aiMemoryUpdated: "AI memory updated",
     dailyDigest: "Daily Digest",
     weeklyStreak: "7-Day Stats & Streak",
-    cloudSync: "Cloud Sync (E2EE)",
+    cloudSync: "Cloud Sync",
     notifications: "Browser Notifications",
     notifOn: "On",
     notifOff: "Off",
@@ -430,7 +430,7 @@ export const translations = {
     dayTasksTooltip: (label: string, count: number) => `${label}: ${count} tasks completed`,
 
     // Sync Modal
-    syncTitle: "TaskDrop Cloud Sync (E2EE)",
+    syncTitle: "TaskDrop Cloud Sync",
     syncSubtitle: "Zero-knowledge two-way sync with 256-bit AES-GCM encryption on your device",
     syncQuickPair: "Quick Device Pairing",
     syncShowQr: "Show Pairing QR Code",

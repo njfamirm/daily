@@ -1,5 +1,21 @@
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
+import { Switch } from "@/components/ui/switch.tsx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import {
   ALARM_SOUND_THEMES,
   type AlarmSoundTheme,
@@ -26,7 +42,6 @@ import {
   Square,
   Sun,
   Volume2,
-  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -40,8 +55,6 @@ interface Props {
   onMessage: (text: string, undo?: () => void) => void;
   onOpenSyncModal: () => void;
 }
-
-type TabType = "general" | "alerts" | "ai" | "sync";
 
 const MEMORY_PROMPTS_FA = [
   "همیشه کارهای کاری و پروژه را با اولویت بالا ثبت کن",
@@ -69,7 +82,7 @@ export function SettingsModal({
 }: Props) {
   const t = getTranslation(lang);
   const isFa = lang === "fa";
-  const [activeTab, setActiveTab] = useState<TabType>("general");
+  const [activeTab, setActiveTab] = useState("general");
   const [memoryValue, setMemoryValue] = useState(db.aiMemory || "");
   const [playingTheme, setPlayingTheme] = useState<AlarmSoundTheme | null>(null);
 
@@ -84,21 +97,8 @@ export function SettingsModal({
     if (!open) {
       stopAlarmRing();
       setPlayingTheme(null);
-      return;
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      stopAlarmRing();
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [open]);
 
   const handleSaveMemory = () => {
     onUpdateMemory(memoryValue.trim());
@@ -127,297 +127,263 @@ export function SettingsModal({
     );
   };
 
-  const tabs: { id: TabType; label: string; icon: typeof Sliders }[] = [
-    { id: "general", label: isFa ? "عمومی" : "General", icon: Sliders },
-    { id: "alerts", label: isFa ? "صدا و هشدار" : "Alerts & Sound", icon: Bell },
-    { id: "ai", label: isFa ? "هوش مصنوعی" : "AI Memory", icon: Brain },
-    { id: "sync", label: isFa ? "همگام‌سازی" : "Sync", icon: Cloud },
-  ];
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={onClose}
-    >
-      <div
-        className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent onClose={onClose} className="max-w-xl p-0 gap-0">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 px-5 py-4">
+        <DialogHeader className="p-5 pb-3 border-b border-zinc-800/80">
           <div className="flex items-center gap-2.5">
             <div className="grid size-8 place-items-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300">
-              <Settings className="size-4 text-zinc-300" />
+              <Settings className="size-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-zinc-100">
-                {isFa ? "تنظیمات برنامه" : "Settings & Preferences"}
-              </h2>
-              <p className="text-[11px] text-zinc-500">
+              <DialogTitle>{isFa ? "تنظیمات برنامه" : "Settings & Preferences"}</DialogTitle>
+              <DialogDescription>
                 {isFa
                   ? "شخصی‌سازی ظاهر، اعلان‌ها، زنگ هشدار و هوش مصنوعی"
                   : "Customize appearance, notifications, alarms and AI memory"}
-              </p>
+              </DialogDescription>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t.close}
-            onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-100"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
+        </DialogHeader>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-zinc-800/80 bg-zinc-900/40 px-5 pt-2 gap-1 overflow-x-auto">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                type="button"
-                key={tab.id}
-                onClick={() => {
-                  void hapticSelection();
-                  setActiveTab(tab.id);
-                }}
-                className={cn(
-                  "flex items-center gap-2 border-b-2 px-3 py-2 text-xs font-medium transition-colors cursor-pointer",
-                  isActive
-                    ? "border-amber-400 text-amber-300 font-semibold"
-                    : "border-transparent text-zinc-400 hover:text-zinc-200",
-                )}
+        {/* Tabbed Settings */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-0">
+          <div className="border-b border-zinc-800/80 bg-zinc-900/30 px-5 pt-2">
+            <TabsList className="bg-transparent border-0 p-0 h-auto gap-2">
+              <TabsTrigger
+                value="general"
+                className="gap-1.5 pb-2.5 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400"
               >
-                <Icon className="size-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+                <Sliders className="size-3.5" />
+                <span>{isFa ? "عمومی" : "General"}</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="alerts"
+                className="gap-1.5 pb-2.5 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400"
+              >
+                <Bell className="size-3.5" />
+                <span>{isFa ? "صدا و هشدار" : "Alerts & Sound"}</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="ai"
+                className="gap-1.5 pb-2.5 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400"
+              >
+                <Brain className="size-3.5" />
+                <span>{isFa ? "هوش مصنوعی" : "AI Memory"}</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="sync"
+                className="gap-1.5 pb-2.5 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-400"
+              >
+                <Cloud className="size-3.5" />
+                <span>{isFa ? "همگام‌سازی" : "Sync"}</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs text-zinc-300">
-          {/* TAB: GENERAL */}
-          {activeTab === "general" && (
-            <div className="space-y-4">
-              {/* Language Selection */}
-              <div className="space-y-2 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-zinc-200">{t.language}</span>
-                  <span className="text-[11px] text-zinc-500">
-                    {lang === "fa" ? "فارسی" : "English"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void hapticSelection();
-                      onUpdateSetting("language", "fa");
-                      onMessage(t.langChanged("فارسی"));
-                    }}
-                    className={cn(
-                      "flex items-center justify-center py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                      lang === "fa"
-                        ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
-                        : "text-zinc-400 hover:text-zinc-200",
-                    )}
-                  >
-                    فارسی
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void hapticSelection();
-                      onUpdateSetting("language", "en");
-                      onMessage(t.langChanged("English"));
-                    }}
-                    className={cn(
-                      "flex items-center justify-center py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                      lang === "en"
-                        ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
-                        : "text-zinc-400 hover:text-zinc-200",
-                    )}
-                  >
-                    English
-                  </button>
-                </div>
-              </div>
+          <div className="max-h-[60vh] overflow-y-auto p-5 space-y-4">
+            {/* GENERAL TAB */}
+            <TabsContent value="general" className="space-y-4 m-0">
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs">{t.language}</CardTitle>
+                    <span className="text-[11px] text-zinc-500">
+                      {lang === "fa" ? "فارسی" : "English"}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void hapticSelection();
+                        onUpdateSetting("language", "fa");
+                        onMessage(t.langChanged("فارسی"));
+                      }}
+                      className={cn(
+                        "flex items-center justify-center py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                        lang === "fa"
+                          ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      فارسی
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void hapticSelection();
+                        onUpdateSetting("language", "en");
+                        onMessage(t.langChanged("English"));
+                      }}
+                      className={cn(
+                        "flex items-center justify-center py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                        lang === "en"
+                          ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      English
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
 
-              {/* Theme Selection */}
-              <div className="space-y-2 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-zinc-200">{t.themeMode}</span>
-                  <span className="text-[11px] text-zinc-500">
-                    {currentTheme === "dark"
-                      ? t.themeDark
-                      : currentTheme === "light"
-                        ? t.themeLight
-                        : t.themeAuto}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void hapticSelection();
-                      onUpdateSetting("theme", "dark");
-                      onMessage(t.themeDarkActive);
-                    }}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                      currentTheme === "dark"
-                        ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
-                        : "text-zinc-400 hover:text-zinc-200",
-                    )}
-                  >
-                    <Moon className="size-3.5 text-zinc-400" />
-                    <span>{t.themeDark}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void hapticSelection();
-                      onUpdateSetting("theme", "light");
-                      onMessage(t.themeLightActive);
-                    }}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                      currentTheme === "light"
-                        ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
-                        : "text-zinc-400 hover:text-zinc-200",
-                    )}
-                  >
-                    <Sun className="size-3.5 text-zinc-400" />
-                    <span>{t.themeLight}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void hapticSelection();
-                      onUpdateSetting("theme", "auto");
-                      onMessage(t.themeAutoActive);
-                    }}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
-                      currentTheme === "auto"
-                        ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
-                        : "text-zinc-400 hover:text-zinc-200",
-                    )}
-                  >
-                    <Laptop className="size-3.5 text-zinc-400" />
-                    <span>{t.themeAuto}</span>
-                  </button>
-                </div>
-              </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs">{t.themeMode}</CardTitle>
+                    <span className="text-[11px] text-zinc-500">
+                      {currentTheme === "dark"
+                        ? t.themeDark
+                        : currentTheme === "light"
+                          ? t.themeLight
+                          : t.themeAuto}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void hapticSelection();
+                        onUpdateSetting("theme", "dark");
+                        onMessage(t.themeDarkActive);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                        currentTheme === "dark"
+                          ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Moon className="size-3.5" />
+                      <span>{t.themeDark}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void hapticSelection();
+                        onUpdateSetting("theme", "light");
+                        onMessage(t.themeLightActive);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                        currentTheme === "light"
+                          ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Sun className="size-3.5" />
+                      <span>{t.themeLight}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void hapticSelection();
+                        onUpdateSetting("theme", "auto");
+                        onMessage(t.themeAutoActive);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                        currentTheme === "auto"
+                          ? "bg-zinc-800 text-zinc-100 font-semibold shadow-xs border border-zinc-700/60"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      <Laptop className="size-3.5" />
+                      <span>{t.themeAuto}</span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
 
-              {/* Android Download Option */}
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="space-y-0.5">
-                  <div className="font-medium text-zinc-200">{t.downloadAndroid}</div>
-                  <p className="text-[11px] text-zinc-500">
-                    {isFa
-                      ? "نصب مستقیم اپلیکیشن روی گوشی با اعلان‌های بومی و آلارم"
-                      : "Direct APK installation with native alarms and background notifications"}
-                  </p>
-                </div>
-                <a
-                  href="https://github.com/njfamirm/taskdrop/releases/download/nightly/taskdrop.apk"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors"
-                >
-                  <Download className="size-3.5" />
-                  <span>{isFa ? "دانلود APK" : "Download APK"}</span>
-                </a>
-              </div>
-            </div>
-          )}
+              <Card>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs">{t.downloadAndroid}</CardTitle>
+                    <CardDescription>
+                      {isFa
+                        ? "نصب مستقیم اپلیکیشن روی گوشی با اعلان‌های بومی و آلارم"
+                        : "Direct APK installation with native alarms and background notifications"}
+                    </CardDescription>
+                  </div>
+                  <a
+                    href="https://github.com/njfamirm/taskdrop/releases/download/nightly/taskdrop.apk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors"
+                  >
+                    <Download className="size-3.5" />
+                    <span>APK</span>
+                  </a>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* TAB: ALERTS & SOUNDS */}
-          {activeTab === "alerts" && (
-            <div className="space-y-4">
-              {/* Browser Notifications Toggle */}
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="space-y-0.5">
-                  <div className="font-medium text-zinc-200">{t.notifications}</div>
-                  <p className="text-[11px] text-zinc-500">
-                    {isFa
-                      ? "ارسال نوتیفیکیشن در زمان سررسید تسک‌ها"
-                      : "Send system notification when a task reaches its deadline"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void hapticSelection();
-                    const next = !db.settings.notifications;
-                    onUpdateSetting("notifications", next);
-                    if (next) void requestNotificationPermission();
-                    onMessage(next ? t.notifEnabled : t.notifDisabled);
-                  }}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden",
-                    db.settings.notifications ? "bg-amber-500" : "bg-zinc-700",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                      db.settings.notifications ? "translate-x-5" : "translate-x-0",
-                    )}
+            {/* ALERTS TAB */}
+            <TabsContent value="alerts" className="space-y-4 m-0">
+              <Card>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs">{t.notifications}</CardTitle>
+                    <CardDescription>
+                      {isFa
+                        ? "ارسال نوتیفیکیشن در زمان سررسید تسک‌ها"
+                        : "Send system notification when a task reaches its deadline"}
+                    </CardDescription>
+                  </div>
+                  <Switch
+                    checked={Boolean(db.settings.notifications)}
+                    onCheckedChange={(checked) => {
+                      void hapticSelection();
+                      onUpdateSetting("notifications", checked);
+                      if (checked) void requestNotificationPermission();
+                      onMessage(checked ? t.notifEnabled : t.notifDisabled);
+                    }}
                   />
-                </button>
-              </div>
+                </CardContent>
+              </Card>
 
-              {/* Alarm Sound Master Toggle */}
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="space-y-0.5">
-                  <div className="font-medium text-zinc-200">{t.alarmSound}</div>
-                  <p className="text-[11px] text-zinc-500">
-                    {isFa
-                      ? "پخش آلارم صوتی مداوم برای تسک‌های سررسیدشده"
-                      : "Play continuous audio alarm loop when deadlines trigger"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void hapticSelection();
-                    const next = !db.settings.sound;
-                    onUpdateSetting("sound", next);
-                    onMessage(next ? t.soundEnabled : t.soundDisabled);
-                  }}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden",
-                    db.settings.sound ? "bg-amber-500" : "bg-zinc-700",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                      db.settings.sound ? "translate-x-5" : "translate-x-0",
-                    )}
+              <Card>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-xs">{t.alarmSound}</CardTitle>
+                    <CardDescription>
+                      {isFa
+                        ? "پخش آلارم صوتی مداوم برای تسک‌های سررسیدشده"
+                        : "Play continuous audio alarm loop when deadlines trigger"}
+                    </CardDescription>
+                  </div>
+                  <Switch
+                    checked={Boolean(db.settings.sound)}
+                    onCheckedChange={(checked) => {
+                      void hapticSelection();
+                      onUpdateSetting("sound", checked);
+                      onMessage(checked ? t.soundEnabled : t.soundDisabled);
+                    }}
                   />
-                </button>
-              </div>
+                </CardContent>
+              </Card>
 
-              {/* Alarm Chime Themes Selector */}
-              <div className="space-y-2 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-zinc-200">
-                    {isFa ? "تم و الگوی صدای زنگ" : "Alarm Melody Pattern"}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">
-                    {isFa
-                      ? ALARM_SOUND_THEMES.find((st) => st.id === currentSoundTheme)?.titleFa
-                      : ALARM_SOUND_THEMES.find((st) => st.id === currentSoundTheme)?.titleEn}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs">
+                      {isFa ? "تم و الگوی صدای زنگ" : "Alarm Melody Pattern"}
+                    </CardTitle>
+                    <span className="text-[11px] text-zinc-500">
+                      {isFa
+                        ? ALARM_SOUND_THEMES.find((st) => st.id === currentSoundTheme)?.titleFa
+                        : ALARM_SOUND_THEMES.find((st) => st.id === currentSoundTheme)?.titleEn}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {ALARM_SOUND_THEMES.map((theme) => {
                     const isSelected = currentSoundTheme === theme.id;
                     const isPlaying = playingTheme === theme.id;
@@ -465,17 +431,15 @@ export function SettingsModal({
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            </div>
-          )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* TAB: AI MEMORY */}
-          {activeTab === "ai" && (
-            <div className="space-y-3">
+            {/* AI TAB */}
+            <TabsContent value="ai" className="space-y-3 m-0">
               <div className="space-y-1">
-                <div className="font-medium text-zinc-200">{t.aiMemoryTitle}</div>
-                <p className="text-[11px] leading-relaxed text-zinc-400">{t.aiMemoryDesc}</p>
+                <CardTitle className="text-xs">{t.aiMemoryTitle}</CardTitle>
+                <CardDescription>{t.aiMemoryDesc}</CardDescription>
               </div>
 
               <Textarea
@@ -483,7 +447,7 @@ export function SettingsModal({
                 value={memoryValue}
                 onChange={(e) => setMemoryValue(e.target.value)}
                 placeholder={t.aiMemoryPlaceholder}
-                className="font-normal text-xs leading-5 border-zinc-700/80 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-400 focus:ring-amber-400/30"
+                className="font-normal text-xs leading-5"
               />
 
               <div>
@@ -521,56 +485,51 @@ export function SettingsModal({
                   {t.aiMemorySave}
                 </Button>
               </div>
-            </div>
-          )}
+            </TabsContent>
 
-          {/* TAB: SYNC & CLOUD */}
-          {activeTab === "sync" && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300">
-                    <Cloud className="size-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-zinc-100">{t.cloudSync}</div>
-                    <div className="text-[11px] text-zinc-400">
-                      {isFa
-                        ? "همگام‌سازی ابری رمزنگاری‌شده مبدا به مقصد (E2EE)"
-                        : "End-to-end encrypted synchronization across devices"}
+            {/* SYNC TAB */}
+            <TabsContent value="sync" className="space-y-4 m-0">
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-9 place-items-center rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300">
+                      <Cloud className="size-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-zinc-100">{t.cloudSync}</div>
+                      <div className="text-[11px] text-zinc-400">
+                        {isFa
+                          ? "همگام‌سازی ابری با رمزنگاری سرتاسری"
+                          : "End-to-end encrypted synchronization across devices"}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      onClose();
-                      onOpenSyncModal();
-                    }}
-                    className="w-full border-zinc-700 bg-zinc-800/90 text-zinc-100 hover:bg-zinc-700"
-                  >
-                    {isFa ? "تنظیم سرور و کلید همگام‌سازی" : "Configure Sync Server & Key"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onClose();
+                        onOpenSyncModal();
+                      }}
+                      className="w-full border-zinc-700 bg-zinc-800/90 text-zinc-100 hover:bg-zinc-700"
+                    >
+                      {isFa ? "تنظیم سرور و کلید همگام‌سازی" : "Configure Sync Server & Key"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
+        </Tabs>
 
         {/* Footer */}
         <div className="flex items-center justify-end border-t border-zinc-800/80 bg-zinc-900/30 px-5 py-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-          >
+          <Button variant="outline" size="sm" onClick={onClose}>
             {isFa ? "بستن" : "Close"}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

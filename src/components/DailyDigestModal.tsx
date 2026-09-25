@@ -1,8 +1,16 @@
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
 import { getTranslation } from "@/lib/i18n.ts";
 import { formatDue } from "@/lib/parse.ts";
 import type { DB, Language } from "@/lib/types.ts";
-import { Check, Copy, FileText, X } from "lucide-react";
+import { Check, Copy, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface Props {
@@ -77,7 +85,7 @@ export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: 
     if (openToday.length > 0) {
       md += `${t.digestRemainingSection(openToday.length)}\n`;
       for (const task of openToday) {
-        const pStr = task.priority === "high" ? (isFa ? " 🚨 فوری" : " 🚨 Urgent") : "";
+        const pStr = task.priority === "high" ? (isFa ? " [فوری]" : " [Urgent]") : "";
         const tagStr = task.tags.length > 0 ? ` [${task.tags.map((x) => `#${x}`).join(" ")}]` : "";
         md += `- [ ] ${task.title}${pStr}${tagStr} (${formatDue(task.due, lang)})\n`;
       }
@@ -88,7 +96,7 @@ export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: 
     if (tomorrowTasks.length > 0) {
       md += `${t.digestTomorrowSection(tomorrowTasks.length)}\n`;
       for (const task of tomorrowTasks) {
-        const pStr = task.priority === "high" ? (isFa ? " 🚨 فوری" : " 🚨 Urgent") : "";
+        const pStr = task.priority === "high" ? (isFa ? " [فوری]" : " [Urgent]") : "";
         const tagStr = task.tags.length > 0 ? ` [${task.tags.map((x) => `#${x}`).join(" ")}]` : "";
         md += `- [ ] ${task.title}${pStr}${tagStr}\n`;
       }
@@ -108,8 +116,6 @@ export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: 
     return md;
   }, [db, isFa, lang, t]);
 
-  if (!open) return null;
-
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(digestText);
@@ -122,35 +128,27 @@ export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: 
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xs"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between border-b border-zinc-800/80 pb-3">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent onClose={onClose}>
+        <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="grid size-7 place-items-center rounded-lg bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
+            <div className="grid size-8 place-items-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300">
               <FileText className="size-4" />
             </div>
-            <h2 className="text-base font-semibold text-zinc-100">{t.digestTitle}</h2>
+            <div>
+              <DialogTitle>{t.digestTitle}</DialogTitle>
+              <DialogDescription>{t.digestDesc}</DialogDescription>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" aria-label={t.close} onClick={onClose}>
-            <X />
-          </Button>
-        </div>
+        </DialogHeader>
 
-        <p className="mb-3 text-xs leading-6 text-zinc-400">{t.digestDesc}</p>
-
-        <div className="relative">
+        <div className="relative my-2">
           <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-900/90 p-4 font-mono text-xs leading-6 text-zinc-200">
             {digestText}
           </pre>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs">
+        <DialogFooter className="flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs">
           <span className="text-[11px] text-zinc-500">{t.digestStandardMd}</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
@@ -159,14 +157,18 @@ export function DailyDigestModal({ open, db, lang = "fa", onClose, onMessage }: 
             <Button
               size="sm"
               onClick={handleCopy}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500 font-semibold cursor-pointer"
+              className="gap-1.5 bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold cursor-pointer"
             >
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copied ? (
+                <Check className="size-3.5 text-emerald-600" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
               {copied ? t.digestCopied : t.digestCopy}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
