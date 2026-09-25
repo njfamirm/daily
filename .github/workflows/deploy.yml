@@ -170,7 +170,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm dlx wrangler deploy --config wrangler.toml
+        run: vp dlx wrangler deploy --config wrangler.toml
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
