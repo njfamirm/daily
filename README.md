@@ -62,7 +62,14 @@ Your daily tasks, thoughts, and private reflections belong to you alone.
 - **7-Day Streak & Consistency Flame**: Visual feedback loop that builds productive daily momentum without shame mechanics.
 - **Focus Pinboard ("Keep in Sight")**: A lightweight pinboard at the top of your workspace for core reminders and north-star thoughts that shouldn't be treated as checkable tasks.
 
-### 5. 🌐 Bilingual & Truly Cross-Platform
+### 5. 🎨 Radical Minimalism & Scoped Metadata Facets
+
+- **Zero-Clutter Canvas by Default**: The interface stays clean and focused on raw execution. No mandatory sidebars, no multi-level dropdowns, and no noisy folder hierarchies unless you want them.
+- **Infinite Customization via Scoped Tags**: Organize tasks across any dimension using key-value tags (e.g., `#area:work`, `#area:personal`, `#area:ngo`, `#type:routine`, `#project:redesign`).
+- **AI-Managed Taxonomy**: Large language models understand and curate your scoped metadata effortlessly during import/export without breaking the schema or cluttering your canvas.
+- **Dynamic On-Demand Tabs**: When scoped tags are present, sleek contextual tabs and faceted filters appear seamlessly to let you slice your focus.
+
+### 6. 🌐 Bilingual & Truly Cross-Platform
 
 - **English & Persian Native Support**: Complete bidirectional UI layout switching (LTR / RTL), custom typography, and locale-aware calendar formatting.
 - **Everywhere You Are**: Available as an installable Progressive Web App (PWA) with desktop keyboard shortcuts, and as a native standalone Android APK with lock-screen alarms and background notifications.

@@ -3,7 +3,7 @@ import { Input, Textarea } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
 import { hapticLight, hapticSuccess, hapticWarning } from "@/lib/haptics.ts";
 import { getTranslation } from "@/lib/i18n.ts";
-import { getTagStyle } from "@/lib/tags.ts";
+import { getTagStyle, parseTag } from "@/lib/tags.ts";
 import type { Language, Priority, Repeat, Task } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -42,27 +42,27 @@ interface Props {
 }
 
 const DEFAULT_TAGS_FA = [
-  "کار",
+  "حوزه:نکسیم",
+  "حوزه:شخصی",
+  "حوزه:NGO",
+  "نوع:روتین",
+  "نوع:جلسه",
+  "نوع:پیگیری",
   "پروژه",
-  "شخصی",
   "خرید",
   "مالی",
-  "جلسه",
-  "سلامتی",
-  "ورزش",
-  "مطالعه",
   "ایده",
 ];
 const DEFAULT_TAGS_EN = [
-  "work",
+  "area:work",
+  "area:personal",
+  "area:ngo",
+  "type:routine",
+  "type:meeting",
+  "type:followup",
   "project",
-  "personal",
   "shopping",
   "finance",
-  "meeting",
-  "health",
-  "fitness",
-  "reading",
   "idea",
 ];
 
@@ -421,22 +421,39 @@ export function TaskEditModal({
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {tags.map((tag) => {
                   const style = getTagStyle(tag);
+                  const parsed = parseTag(tag);
+
                   return (
                     <span
                       key={tag}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium",
+                        "inline-flex items-center rounded-lg border text-xs font-medium overflow-hidden",
                         style.bg,
                         style.text,
                         style.border,
                       )}
                     >
-                      <span className={cn("size-1.5 rounded-full", style.dot)} />
-                      <span>#{tag}</span>
+                      {parsed.isScoped ? (
+                        <>
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 text-[10px] font-mono",
+                              style.keyBg || "bg-black/30",
+                            )}
+                          >
+                            {parsed.key}
+                          </span>
+                          <span className="pe-1 ps-1 py-0.5 font-medium">{parsed.value}</span>
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 ps-2 pe-1 py-0.5">
+                          <span className={cn("size-1.5 rounded-full", style.dot)} />#{tag}
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="text-zinc-400 hover:text-red-400 cursor-pointer"
+                        className="px-1.5 py-0.5 text-zinc-400 hover:bg-black/20 hover:text-red-400 cursor-pointer"
                       >
                         <X className="size-3" />
                       </button>

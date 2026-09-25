@@ -22,6 +22,7 @@ Tasks have optional due dates and priorities; the app alerts the user when a dea
 9. \`notes\` are pinned focus notes displayed at the top of the canvas.
 10. \`aiMemory\` contains the user's persistent preferences and directives for you; always respect it unless explicitly asked to modify it.
 11. \`done: true\` marks a task as completed.
+12. **Scoped Tags & Organization (\`tags\`):** Use structured scoped tags with \`key:value\` syntax (e.g. \`"حوزه:نکسیم"\`, \`"حوزه:شخصی"\`, \`"حوزه:NGO"\`, \`"نوع:روتین"\`, \`"نوع:جلسه"\`, \`"نوع:پیگیری"\`, \`"پروژه:..."\`). Always assign the appropriate \`حوزه:...\` (area/scope) and \`نوع:...\` (type) when creating or categorizing tasks.
 
 ## Task Schema
 { "id": string, "title": string, "description": string|null, "due": string|null, "repeat": "none"|"daily"|"weekly"|"monthly",

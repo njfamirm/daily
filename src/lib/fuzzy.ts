@@ -133,12 +133,23 @@ export function scoreTask(task: Task, query: string): number {
     }
   }
 
-  // Tags match
+  // Tags & Scoped Facets match
   if (task.tags && task.tags.length > 0) {
-    for (const tag of task.tags) {
-      const tagScore = fuzzyScore(tag, query.replace(/^#/, ""));
+    const cleanQuery = query.replace(/^#/, "");
+    for (const rawTag of task.tags) {
+      const cleanTag = rawTag.replace(/^#/, "");
+      let tagScore = fuzzyScore(cleanTag, cleanQuery);
+
+      // If scoped tag (e.g. "حوزه:نکسیم"), also match against value part directly
+      if (cleanTag.includes(":")) {
+        const parts = cleanTag.split(":");
+        const valScore = fuzzyScore(parts[1], cleanQuery);
+        const keyScore = fuzzyScore(parts[0], cleanQuery);
+        tagScore = Math.max(tagScore, valScore, keyScore * 0.8);
+      }
+
       if (tagScore > 0) {
-        totalScore += tagScore * 2;
+        totalScore += tagScore * 2.5;
       }
     }
   }

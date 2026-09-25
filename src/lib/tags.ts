@@ -1,150 +1,103 @@
-import type { Priority } from "@/lib/types.ts";
+import type { Priority, Task } from "@/lib/types.ts";
 
 export interface TagStyle {
   bg: string;
   text: string;
   border: string;
   dot: string;
+  keyBg?: string;
 }
 
-const PRESET_TAG_STYLES: Record<string, TagStyle> = {
-  مهم: {
-    bg: "bg-rose-950/60",
-    text: "text-rose-300",
-    border: "border-rose-800/70",
-    dot: "bg-rose-400",
+export interface ParsedTag {
+  raw: string;
+  isScoped: boolean;
+  key?: string;
+  value: string;
+}
+
+/**
+ * Parses a raw tag into either a scoped facet (e.g. "حوزه:نکسیم" -> key: "حوزه", value: "نکسیم")
+ * or a simple standalone tag.
+ */
+export function parseTag(tag: string): ParsedTag {
+  const clean = tag.trim().replace(/^#/, "");
+  const colonIdx = clean.indexOf(":");
+  if (colonIdx > 0 && colonIdx < clean.length - 1) {
+    const key = clean.slice(0, colonIdx).trim();
+    const value = clean.slice(colonIdx + 1).trim();
+    return {
+      raw: clean,
+      isScoped: true,
+      key,
+      value,
+    };
+  }
+  return {
+    raw: clean,
+    isScoped: false,
+    value: clean,
+  };
+}
+
+const PRESET_KEY_STYLES: Record<
+  string,
+  { bg: string; text: string; border: string; keyBg: string; dot: string }
+> = {
+  حوزه: {
+    bg: "bg-amber-950/40",
+    text: "text-amber-200",
+    border: "border-amber-700/60",
+    keyBg: "bg-amber-900/60 text-amber-300",
+    dot: "bg-amber-400",
   },
-  فوری: {
-    bg: "bg-rose-950/60",
-    text: "text-rose-300",
-    border: "border-rose-800/70",
-    dot: "bg-rose-400",
+  area: {
+    bg: "bg-amber-950/40",
+    text: "text-amber-200",
+    border: "border-amber-700/60",
+    keyBg: "bg-amber-900/60 text-amber-300",
+    dot: "bg-amber-400",
   },
-  ضروری: {
-    bg: "bg-red-950/60",
-    text: "text-red-300",
-    border: "border-red-800/70",
-    dot: "bg-red-400",
-  },
-  urgent: {
-    bg: "bg-rose-950/60",
-    text: "text-rose-300",
-    border: "border-rose-800/70",
-    dot: "bg-rose-400",
-  },
-  work: {
-    bg: "bg-sky-950/60",
-    text: "text-sky-300",
-    border: "border-sky-800/70",
+  نوع: {
+    bg: "bg-sky-950/40",
+    text: "text-sky-200",
+    border: "border-sky-700/60",
+    keyBg: "bg-sky-900/60 text-sky-300",
     dot: "bg-sky-400",
   },
-  کار: {
-    bg: "bg-sky-950/60",
-    text: "text-sky-300",
-    border: "border-sky-800/70",
+  type: {
+    bg: "bg-sky-950/40",
+    text: "text-sky-200",
+    border: "border-sky-700/60",
+    keyBg: "bg-sky-900/60 text-sky-300",
     dot: "bg-sky-400",
-  },
-  project: {
-    bg: "bg-blue-950/60",
-    text: "text-blue-300",
-    border: "border-blue-800/70",
-    dot: "bg-blue-400",
   },
   پروژه: {
-    bg: "bg-blue-950/60",
-    text: "text-blue-300",
-    border: "border-blue-800/70",
-    dot: "bg-blue-400",
+    bg: "bg-violet-950/40",
+    text: "text-violet-200",
+    border: "border-violet-700/60",
+    keyBg: "bg-violet-900/60 text-violet-300",
+    dot: "bg-violet-400",
   },
-  personal: {
-    bg: "bg-purple-950/60",
-    text: "text-purple-300",
-    border: "border-purple-800/70",
-    dot: "bg-purple-400",
+  project: {
+    bg: "bg-violet-950/40",
+    text: "text-violet-200",
+    border: "border-violet-700/60",
+    keyBg: "bg-violet-900/60 text-violet-300",
+    dot: "bg-violet-400",
   },
-  شخصی: {
-    bg: "bg-purple-950/60",
-    text: "text-purple-300",
-    border: "border-purple-800/70",
-    dot: "bg-purple-400",
-  },
-  shopping: {
-    bg: "bg-emerald-950/60",
-    text: "text-emerald-300",
-    border: "border-emerald-800/70",
+  مشتری: {
+    bg: "bg-emerald-950/40",
+    text: "text-emerald-200",
+    border: "border-emerald-700/60",
+    keyBg: "bg-emerald-900/60 text-emerald-300",
     dot: "bg-emerald-400",
   },
-  خرید: {
-    bg: "bg-emerald-950/60",
-    text: "text-emerald-300",
-    border: "border-emerald-800/70",
+  client: {
+    bg: "bg-emerald-950/40",
+    text: "text-emerald-200",
+    border: "border-emerald-700/60",
+    keyBg: "bg-emerald-900/60 text-emerald-300",
     dot: "bg-emerald-400",
-  },
-  finance: {
-    bg: "bg-emerald-950/60",
-    text: "text-emerald-300",
-    border: "border-emerald-800/70",
-    dot: "bg-emerald-400",
-  },
-  مالی: {
-    bg: "bg-emerald-950/60",
-    text: "text-emerald-300",
-    border: "border-emerald-800/70",
-    dot: "bg-emerald-400",
-  },
-  idea: {
-    bg: "bg-amber-950/60",
-    text: "text-amber-300",
-    border: "border-amber-800/70",
-    dot: "bg-amber-400",
-  },
-  ایده: {
-    bg: "bg-amber-950/60",
-    text: "text-amber-300",
-    border: "border-amber-800/70",
-    dot: "bg-amber-400",
-  },
-  reading: {
-    bg: "bg-teal-950/60",
-    text: "text-teal-300",
-    border: "border-teal-800/70",
-    dot: "bg-teal-400",
-  },
-  مطالعه: {
-    bg: "bg-teal-950/60",
-    text: "text-teal-300",
-    border: "border-teal-800/70",
-    dot: "bg-teal-400",
-  },
-  meeting: {
-    bg: "bg-indigo-950/60",
-    text: "text-indigo-300",
-    border: "border-indigo-800/70",
-    dot: "bg-indigo-400",
-  },
-  جلسه: {
-    bg: "bg-indigo-950/60",
-    text: "text-indigo-300",
-    border: "border-indigo-800/70",
-    dot: "bg-indigo-400",
-  },
-  health: {
-    bg: "bg-green-950/60",
-    text: "text-green-300",
-    border: "border-green-800/70",
-    dot: "bg-green-400",
-  },
-  fitness: {
-    bg: "bg-orange-950/60",
-    text: "text-orange-300",
-    border: "border-orange-800/70",
-    dot: "bg-orange-400",
-  },
-  ورزش: {
-    bg: "bg-orange-950/60",
-    text: "text-orange-300",
-    border: "border-orange-800/70",
-    dot: "bg-orange-400",
   },
 };
 
@@ -154,36 +107,42 @@ const DYNAMIC_PALETTES: TagStyle[] = [
     text: "text-violet-300",
     border: "border-violet-800/70",
     dot: "bg-violet-400",
+    keyBg: "bg-violet-900/60 text-violet-200",
   },
   {
     bg: "bg-cyan-950/60",
     text: "text-cyan-300",
     border: "border-cyan-800/70",
     dot: "bg-cyan-400",
+    keyBg: "bg-cyan-900/60 text-cyan-200",
   },
   {
-    bg: "bg-fuchsia-950/60",
-    text: "text-fuchsia-300",
-    border: "border-fuchsia-800/70",
-    dot: "bg-fuchsia-400",
+    bg: "bg-emerald-950/60",
+    text: "text-emerald-300",
+    border: "border-emerald-800/70",
+    dot: "bg-emerald-400",
+    keyBg: "bg-emerald-900/60 text-emerald-200",
   },
   {
-    bg: "bg-lime-950/60",
-    text: "text-lime-300",
-    border: "border-lime-800/70",
-    dot: "bg-lime-400",
+    bg: "bg-amber-950/60",
+    text: "text-amber-300",
+    border: "border-amber-800/70",
+    dot: "bg-amber-400",
+    keyBg: "bg-amber-900/60 text-amber-200",
   },
   {
-    bg: "bg-yellow-950/60",
-    text: "text-yellow-300",
-    border: "border-yellow-800/70",
-    dot: "bg-yellow-400",
+    bg: "bg-rose-950/60",
+    text: "text-rose-300",
+    border: "border-rose-800/70",
+    dot: "bg-rose-400",
+    keyBg: "bg-rose-900/60 text-rose-200",
   },
   {
-    bg: "bg-pink-950/60",
-    text: "text-pink-300",
-    border: "border-pink-800/70",
-    dot: "bg-pink-400",
+    bg: "bg-blue-950/60",
+    text: "text-blue-300",
+    border: "border-blue-800/70",
+    dot: "bg-blue-400",
+    keyBg: "bg-blue-900/60 text-blue-200",
   },
 ];
 
@@ -197,12 +156,101 @@ function hashString(str: string): number {
 }
 
 export function getTagStyle(tag: string): TagStyle {
-  const cleanTag = tag.trim().toLowerCase().replace(/^#/, "");
-  if (PRESET_TAG_STYLES[cleanTag]) {
-    return PRESET_TAG_STYLES[cleanTag];
+  const parsed = parseTag(tag);
+  if (parsed.isScoped && parsed.key && PRESET_KEY_STYLES[parsed.key.toLowerCase()]) {
+    return PRESET_KEY_STYLES[parsed.key.toLowerCase()];
   }
+  const cleanTag = parsed.raw.toLowerCase();
   const index = hashString(cleanTag) % DYNAMIC_PALETTES.length;
   return DYNAMIC_PALETTES[index];
+}
+
+export interface FacetGroup {
+  key: string;
+  isScoped: boolean;
+  values: {
+    value: string;
+    rawTag: string;
+    count: number;
+    openCount: number;
+  }[];
+}
+
+/**
+ * Extracts and aggregates all facet keys and values across active tasks.
+ * (e.g. Scoped facets like "حوزه: [نکسیم, شخصی, ngo]", "نوع: [روتین, جلسه]", and standalone tags)
+ */
+export function extractFacetGroups(tasks: Task[]): FacetGroup[] {
+  const facetMap = new Map<
+    string,
+    {
+      isScoped: boolean;
+      valueMap: Map<string, { rawTag: string; count: number; openCount: number }>;
+    }
+  >();
+
+  for (const task of tasks) {
+    if (task.deletedAt) continue;
+    if (!task.tags || task.tags.length === 0) continue;
+
+    for (const tag of task.tags) {
+      const parsed = parseTag(tag);
+      const groupKey = parsed.isScoped ? parsed.key || "سایر" : "برچسب‌ها";
+      const val = parsed.value;
+
+      if (!facetMap.has(groupKey)) {
+        facetMap.set(groupKey, {
+          isScoped: parsed.isScoped,
+          valueMap: new Map(),
+        });
+      }
+
+      const group = facetMap.get(groupKey)!;
+      if (!group.valueMap.has(val)) {
+        group.valueMap.set(val, {
+          rawTag: parsed.raw,
+          count: 0,
+          openCount: 0,
+        });
+      }
+
+      const stats = group.valueMap.get(val)!;
+      stats.count++;
+      if (!task.done) {
+        stats.openCount++;
+      }
+    }
+  }
+
+  const result: FacetGroup[] = [];
+
+  // Give priority to "حوزه" / "area" as primary category facet
+  const primaryKeys = ["حوزه", "area", "نوع", "type", "پروژه", "project"];
+  const sortedKeys = Array.from(facetMap.keys()).sort((a, b) => {
+    const idxA = primaryKeys.indexOf(a.toLowerCase());
+    const idxB = primaryKeys.indexOf(b.toLowerCase());
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const key of sortedKeys) {
+    const data = facetMap.get(key)!;
+    const values = Array.from(data.valueMap.entries()).map(([value, info]) => ({
+      value,
+      rawTag: info.rawTag,
+      count: info.count,
+      openCount: info.openCount,
+    }));
+    result.push({
+      key,
+      isScoped: data.isScoped,
+      values,
+    });
+  }
+
+  return result;
 }
 
 export const PRIORITY_CONFIG: Record<
