@@ -32,7 +32,7 @@ Tasks have optional due dates and priorities; the app alerts the user when a dea
 { "id": string, "text": string, "createdAt": string }
 
 ## Database Schema
-{ "version": 1, "settings": { "sound": boolean, "notifications": boolean, "checkIntervalSec": number, "leadMinutes": number, "theme": "dark"|"light"|"auto", "primaryColor": string, "language": "fa"|"en" }, "aiMemory": string, "notes": Note[], "tasks": Task[] }
+{ "version": 1, "settings": { "sound": boolean, "notifications": boolean, "checkIntervalSec": number, "leadMinutes": number, "theme": "dark"|"light"|"auto", "language": "fa"|"en" }, "aiMemory": string, "notes": Note[], "tasks": Task[] }
 `;
 
 function localISO(d: Date) {

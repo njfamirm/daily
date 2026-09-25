@@ -1,4 +1,5 @@
 import { AIMemorySheet } from "@/components/AIMemorySheet.tsx";
+import { AlarmSoundModal } from "@/components/AlarmSoundModal.tsx";
 import { DailyDigestModal } from "@/components/DailyDigestModal.tsx";
 import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { StreakModal } from "@/components/StreakModal.tsx";
@@ -6,13 +7,14 @@ import { SyncModal } from "@/components/SyncModal.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
+import { ALARM_SOUND_THEMES } from "@/lib/alarmAudio.ts";
 import { getTranslation } from "@/lib/i18n.ts";
 import { requestNotificationPermission } from "@/lib/notify.ts";
 import { buildPayload } from "@/lib/payload.ts";
 import { parseIncoming } from "@/lib/store.ts";
-import { applyTheme, COLOR_PRESETS, getColorLabel } from "@/lib/theme.ts";
+import { applyTheme } from "@/lib/theme.ts";
 import { hapticSelection, hapticSuccess } from "@/lib/haptics.ts";
-import type { DB, Language, PrimaryColor, ThemeMode } from "@/lib/types.ts";
+import type { DB, Language, ThemeMode } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
   Bell,
@@ -30,8 +32,9 @@ import {
   Laptop,
   Moon,
   MoreVertical,
-  Palette,
+  Music,
   Plus,
+  Search,
   Sun,
   Trash2,
   Volume2,
@@ -44,7 +47,9 @@ interface Props {
   lang: Language;
   dueCount: number;
   showInput: boolean;
+  showSearch: boolean;
   onToggleInput: () => void;
+  onToggleSearch: () => void;
   onReplace: (db: DB) => void;
   onUpdateMemory: (memory: string) => void;
   onUpdateSetting: <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) => void;
@@ -57,7 +62,9 @@ export function Header({
   lang,
   dueCount,
   showInput,
+  showSearch,
   onToggleInput,
+  onToggleSearch,
   onReplace,
   onUpdateMemory,
   onUpdateSetting,
@@ -72,16 +79,15 @@ export function Header({
   const [streakOpen, setStreakOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [soundModalOpen, setSoundModalOpen] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
 
   const currentTheme: ThemeMode = db.settings.theme || "dark";
-  const currentPrimary: PrimaryColor = db.settings.primaryColor || "yellow";
-  const activeColorObj = COLOR_PRESETS.find((c) => c.id === currentPrimary) || COLOR_PRESETS[0];
 
-  // Apply theme and primary accent color to DOM
+  // Apply theme to DOM and status bar
   useEffect(() => {
-    void applyTheme(currentTheme, currentPrimary);
-  }, [currentTheme, currentPrimary]);
+    void applyTheme(currentTheme);
+  }, [currentTheme]);
 
   // Close menu on Escape
   useEffect(() => {
@@ -93,14 +99,6 @@ export function Header({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [menuOpen]);
-
-  const selectPrimaryColor = (color: PrimaryColor) => {
-    void hapticSelection();
-    onUpdateSetting("primaryColor", color);
-    const colorObj = COLOR_PRESETS.find((c) => c.id === color);
-    const label = colorObj ? getColorLabel(colorObj, lang) : color;
-    onMessage(t.colorSelected(label));
-  };
 
   const selectLanguage = (newLang: Language) => {
     void hapticSelection();
@@ -179,7 +177,7 @@ export function Header({
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            <circle cx="46" cy="64" r="2.2" fill={activeColorObj.bgHex} />
+            <circle cx="46" cy="64" r="2.2" fill="#eab308" />
           </svg>
         </div>
 
@@ -218,6 +216,37 @@ export function Header({
         >
           <ClipboardPaste className="size-3.5 text-zinc-300" />
           <span>{t.paste}</span>
+        </Button>
+
+        {/* Toggle search input */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={
+            showSearch
+              ? lang === "fa"
+                ? "بستن جستجو"
+                : "Hide search"
+              : lang === "fa"
+                ? "جستجوی تسک‌ها (Cmd+K)"
+                : "Search tasks (Cmd+K)"
+          }
+          title={
+            showSearch
+              ? lang === "fa"
+                ? "بستن جستجو"
+                : "Hide search"
+              : lang === "fa"
+                ? "جستجوی تسک‌ها (Cmd+K)"
+                : "Search tasks (Cmd+K)"
+          }
+          onClick={onToggleSearch}
+          className={cn(
+            "transition-colors",
+            showSearch ? "text-amber-400 bg-zinc-800/80" : "text-zinc-400 hover:text-zinc-200",
+          )}
+        >
+          <Search className="size-4" />
         </Button>
 
         {/* Toggle quick add input */}
@@ -355,41 +384,6 @@ export function Header({
 
                 <div className="my-1 border-t border-zinc-800/80" />
 
-                {/* Accent Color Palette Selection */}
-                <div className="mb-2 px-2 py-1">
-                  <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-zinc-400">
-                    <span className="flex items-center gap-1.5">
-                      <Palette className="size-3.5 text-amber-400" />
-                      {t.accentColor}
-                    </span>
-                    <span className="text-[10px] text-zinc-500">
-                      {getColorLabel(activeColorObj, lang)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-1">
-                    {COLOR_PRESETS.map((preset) => {
-                      const isSelected = currentPrimary === preset.id;
-                      const presetLabel = getColorLabel(preset, lang);
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => selectPrimaryColor(preset.id)}
-                          title={presetLabel}
-                          className={cn(
-                            "relative size-6 rounded-full transition-transform hover:scale-110 cursor-pointer",
-                            preset.dotClass,
-                            isSelected &&
-                              "ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110",
-                          )}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="my-1 border-t border-zinc-800/80" />
-
                 <button
                   type="button"
                   onClick={() => {
@@ -502,6 +496,29 @@ export function Header({
                   </span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setSoundModalOpen(true);
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-zinc-200 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Music className="size-4 text-amber-400" />
+                    <span>{lang === "fa" ? "تم و نوع صدای زنگ" : "Alarm Sound Tone"}</span>
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                    {lang === "fa"
+                      ? ALARM_SOUND_THEMES.find(
+                          (st) => st.id === (db.settings.alarmTheme || "marimba"),
+                        )?.titleFa
+                      : ALARM_SOUND_THEMES.find(
+                          (st) => st.id === (db.settings.alarmTheme || "marimba"),
+                        )?.titleEn}
+                  </span>
+                </button>
+
                 <div className="my-1 border-t border-zinc-800/80" />
 
                 <button
@@ -550,6 +567,22 @@ export function Header({
       </div>
 
       {/* Modals & Sheets */}
+      <AlarmSoundModal
+        open={soundModalOpen}
+        currentTheme={db.settings.alarmTheme || "marimba"}
+        lang={lang}
+        onSelectTheme={(theme) => {
+          onUpdateSetting("alarmTheme", theme);
+          const themeObj = ALARM_SOUND_THEMES.find((t) => t.id === theme);
+          onMessage(
+            lang === "fa"
+              ? `صدای زنگ «${themeObj?.titleFa || theme}» تنظیم شد`
+              : `Alarm sound set to ${themeObj?.titleEn || theme}`,
+          );
+        }}
+        onClose={() => setSoundModalOpen(false)}
+      />
+
       <AIMemorySheet
         open={memoryOpen}
         memory={db.aiMemory || ""}

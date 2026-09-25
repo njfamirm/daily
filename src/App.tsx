@@ -1,18 +1,24 @@
+import { AlarmModal } from "@/components/AlarmModal.tsx";
+import { CategoryFilter } from "@/components/CategoryFilter.tsx";
 import { Header } from "@/components/Header.tsx";
 import { Notes } from "@/components/Notes.tsx";
 import { QuickAdd } from "@/components/QuickAdd.tsx";
+import { SearchBar } from "@/components/SearchBar.tsx";
 import { TaskItem } from "@/components/TaskItem.tsx";
+import { UpdateDialog } from "@/components/UpdateDialog.tsx";
 import { fireConfettiAt } from "@/lib/confetti.ts";
+import { fuzzySearchTasks } from "@/lib/fuzzy.ts";
 import { hapticLight, hapticMedium, hapticSuccess, hapticWarning } from "@/lib/haptics.ts";
 import { getTranslation, updateDocumentDirection } from "@/lib/i18n.ts";
-import { UpdateDialog } from "@/components/UpdateDialog.tsx";
 import { initNotificationChannel, syncAllTaskNotifications } from "@/lib/notifications.ts";
-import { beep, notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
+import { notify, requestNotificationPermission, setBadge } from "@/lib/notify.ts";
 import { parseInput } from "@/lib/parse.ts";
 import type { DB, Language, SnoozePreset, Task } from "@/lib/types.ts";
 import { useAutoCloudSync } from "@/lib/useCloudSync.ts";
 import { useDB } from "@/lib/useDB.ts";
 import { cn, uid } from "@/lib/utils.ts";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   AlertCircle,
   Calendar,
@@ -20,6 +26,7 @@ import {
   CheckSquare,
   Clock,
   Flame,
+  SearchX,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -74,12 +81,23 @@ export function App() {
 
   const [now, setNow] = useState(() => Date.now());
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [ringingTasks, setRingingTasks] = useState<Task[]>([]);
   const [showInput, setShowInput] = useState(() => {
     try {
       const saved = localStorage.getItem("daily.showInput");
       return saved !== null ? saved === "true" : true;
     } catch {
       return true;
+    }
+  });
+  const [showSearch, setShowSearch] = useState(() => {
+    try {
+      const saved = localStorage.getItem("daily.showSearch");
+      return saved !== null ? saved === "true" : false;
+    } catch {
+      return false;
     }
   });
   const firedRef = useRef(false);
@@ -94,12 +112,37 @@ export function App() {
     });
   };
 
+  const toggleSearch = () => {
+    setShowSearch((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("daily.showSearch", String(next));
+      } catch {}
+      if (!next) {
+        setSearchQuery("");
+      }
+      return next;
+    });
+  };
+
+  // Global shortcut to reveal search bar if hidden
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
   const showToast = (text: string, undo?: () => void) => {
     setToast({ text, undo });
     setTimeout(() => setToast(null), undo ? 8000 : 3000);
   };
 
-  // Initialize native notification channel with high priority
+  // Initialize native notification channel with high priority and action buttons
   useEffect(() => {
     void initNotificationChannel();
   }, []);
@@ -109,12 +152,60 @@ export function App() {
     void syncAllTaskNotifications(db.tasks);
   }, [db.tasks]);
 
-  // Periodic reminder checking engine
+  // Handle Capacitor native notification events & actions
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let isMounted = true;
+    let actionSub: { remove: () => void } | null = null;
+    let receiveSub: { remove: () => void } | null = null;
+
+    void LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+      if (!isMounted) return;
+      const taskId = action.notification.extra?.taskId;
+      if (!taskId) return;
+
+      if (action.actionId === "snooze_15m") {
+        snooze(taskId, "15m");
+      } else if (action.actionId === "done") {
+        toggle(taskId);
+      } else {
+        // Dismiss action or clicked notification: display ringing alarm modal if still open
+        const task = db.tasks.find((t) => t.id === taskId);
+        if (task && !task.done && !task.deletedAt) {
+          setRingingTasks((prev) => (prev.some((p) => p.id === taskId) ? prev : [...prev, task]));
+        }
+      }
+    }).then((sub) => {
+      actionSub = sub;
+    });
+
+    void LocalNotifications.addListener("localNotificationReceived", (notification) => {
+      if (!isMounted) return;
+      const taskId = notification.extra?.taskId;
+      if (!taskId) return;
+      const task = db.tasks.find((t) => t.id === taskId);
+      if (task && !task.done && !task.deletedAt) {
+        setRingingTasks((prev) => (prev.some((p) => p.id === taskId) ? prev : [...prev, task]));
+      }
+    }).then((sub) => {
+      receiveSub = sub;
+    });
+
+    return () => {
+      isMounted = false;
+      actionSub?.remove();
+      receiveSub?.remove();
+    };
+  }, [db.tasks]);
+
+  // Periodic reminder checking engine (checks due alarms every interval)
   useEffect(() => {
     const tick = () => {
       setNow(Date.now());
       const currentTime = Date.now();
       const lead = db.settings.leadMinutes * 60_000;
+
       const ring: Task[] = db.tasks.filter(
         (x) =>
           !x.done &&
@@ -123,11 +214,22 @@ export function App() {
           new Date(x.due).getTime() - lead <= currentTime &&
           (x.notifiedAt === null || new Date(x.notifiedAt).getTime() < new Date(x.due).getTime()),
       );
+
       if (ring.length > 0) {
+        // Trigger fullscreen alarm modal
+        setRingingTasks((prev) => {
+          const prevIds = new Set(prev.map((p) => p.id));
+          const additions = ring.filter((r) => !prevIds.has(r.id));
+          return additions.length > 0 ? [...prev, ...additions] : prev;
+        });
+
+        // Browser notification
         if (db.settings.notifications) {
-          for (const x of ring) notify(t.appName, x.title);
+          for (const x of ring) {
+            notify(t.appName, x.title);
+          }
         }
-        if (db.settings.sound) beep(ring.length > 1 ? 3 : 2);
+
         const ids = new Set(ring.map((x) => x.id));
         const nowIso = new Date().toISOString();
         update((prev) => ({
@@ -138,6 +240,7 @@ export function App() {
         }));
       }
     };
+
     tick();
     const id = setInterval(tick, db.settings.checkIntervalSec * 1000);
     return () => clearInterval(id);
@@ -230,7 +333,10 @@ export function App() {
     update((prev) => ({ ...prev, tasks: [task, ...prev.tasks] }));
   };
 
-  const toggle = (id: string, event?: React.MouseEvent) =>
+  const toggle = (id: string, event?: React.MouseEvent) => {
+    // Remove from ringing tasks if active
+    setRingingTasks((prev) => prev.filter((t) => t.id !== id));
+
     update((prev) => {
       const target = prev.tasks.find((t) => t.id === id);
       if (target && !target.done) {
@@ -262,8 +368,11 @@ export function App() {
         }),
       };
     });
+  };
 
   const remove = (id: string) => {
+    // Remove from ringing tasks if active
+    setRingingTasks((prev) => prev.filter((t) => t.id !== id));
     void hapticWarning();
     const before = db;
     const nowIso = new Date().toISOString();
@@ -277,6 +386,8 @@ export function App() {
   };
 
   const snooze = (id: string, preset: SnoozePreset) => {
+    // Dismiss from active alarm modal
+    setRingingTasks((prev) => prev.filter((t) => t.id !== id));
     void hapticMedium();
     const before = db;
     const targetIso = computeSnoozeTime(preset);
@@ -300,6 +411,11 @@ export function App() {
     showToast(t.snoozedToast(label), () => setDb(before));
   };
 
+  const dismissAlarm = (taskIds: string[]) => {
+    const idSet = new Set(taskIds);
+    setRingingTasks((prev) => prev.filter((t) => !idSet.has(t.id)));
+  };
+
   const rename = (id: string, title: string, description?: string | null) => {
     const nowIso = new Date().toISOString();
     update((prev) => ({
@@ -315,6 +431,38 @@ export function App() {
           : t,
       ),
     }));
+  };
+
+  const updateTask = (id: string, updates: Partial<Omit<Task, "id" | "createdAt">>) => {
+    const before = db;
+    const nowIso = new Date().toISOString();
+    update((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              ...updates,
+              updatedAt: nowIso,
+            }
+          : t,
+      ),
+    }));
+
+    if (updates.priority !== undefined && Object.keys(updates).length === 1) {
+      const p = updates.priority;
+      const label =
+        p === "high"
+          ? t.priorityHigh
+          : p === "medium"
+            ? t.priorityMedium
+            : p === "low"
+              ? t.priorityLow
+              : t.priorityNone;
+      showToast(t.priorityChangedToast(label), () => setDb(before));
+    } else {
+      showToast(t.taskUpdatedToast, () => setDb(before));
+    }
   };
 
   const clearDone = () => {
@@ -366,8 +514,27 @@ export function App() {
     return Array.from(set);
   }, [db.tasks]);
 
+  // Filter tasks based on selected Category and Fuzzy Search Query
+  const filteredTasks = useMemo(() => {
+    let list = db.tasks.filter((t) => !t.deletedAt);
+
+    // 1. Category filter
+    if (selectedCategory === "uncategorized") {
+      list = list.filter((t) => !t.tags || t.tags.length === 0);
+    } else if (selectedCategory) {
+      list = list.filter((t) => t.tags && t.tags.includes(selectedCategory));
+    }
+
+    // 2. Fuzzy Search filter
+    if (searchQuery.trim()) {
+      list = fuzzySearchTasks(list, searchQuery);
+    }
+
+    return list;
+  }, [db.tasks, selectedCategory, searchQuery]);
+
   const groups = useMemo(() => {
-    const open = db.tasks.filter((t) => !t.done && !t.deletedAt);
+    const open = filteredTasks.filter((t) => !t.done);
     const ts = (t: Task) => (t.due ? new Date(t.due).getTime() : Infinity);
 
     if (sortBy === "priority") {
@@ -389,7 +556,7 @@ export function App() {
 
       const highPriority = open.filter((t) => t.priority === "high").sort(sortTasks);
       const regularTasks = open.filter((t) => t.priority !== "high").sort(sortTasks);
-      const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
+      const done = filteredTasks.filter((t) => t.done).slice(0, 25);
 
       return {
         mode: "priority" as const,
@@ -415,7 +582,7 @@ export function App() {
           return pWeight[a.priority || "none"] - pWeight[b.priority || "none"];
         });
 
-      const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
+      const done = filteredTasks.filter((t) => t.done).slice(0, 25);
 
       return {
         mode: "due" as const,
@@ -429,20 +596,20 @@ export function App() {
     const createdTasks = [...open].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    const done = db.tasks.filter((t) => t.done && !t.deletedAt).slice(0, 25);
+    const done = filteredTasks.filter((t) => t.done).slice(0, 25);
 
     return {
       mode: "created" as const,
       createdTasks,
       done,
     };
-  }, [db.tasks, now, sortBy]);
+  }, [filteredTasks, now, sortBy]);
 
   const setSetting = <K extends keyof DB["settings"]>(k: K, v: DB["settings"][K]) =>
     update((prev) => ({ ...prev, settings: { ...prev.settings, [k]: v } }));
 
   const activeTasksCount = db.tasks.filter((t) => !t.deletedAt).length;
-  const openCount = db.tasks.filter((t) => !t.done && !t.deletedAt).length;
+  const openCount = filteredTasks.filter((t) => !t.done).length;
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:py-10">
@@ -451,7 +618,9 @@ export function App() {
         lang={lang}
         dueCount={due}
         showInput={showInput}
+        showSearch={showSearch}
         onToggleInput={toggleInput}
+        onToggleSearch={toggleSearch}
         onReplace={setDb}
         onUpdateMemory={(aiMemory) => update((prev) => ({ ...prev, aiMemory }))}
         onUpdateSetting={setSetting}
@@ -459,8 +628,35 @@ export function App() {
         onMessage={showToast}
       />
 
+      {/* Quick Add Input Bar */}
       {showInput && <QuickAdd onAdd={addTask} existingTags={allTags} lang={lang} />}
 
+      {/* Fuzzy Search Bar */}
+      {showSearch && (
+        <SearchBar
+          query={searchQuery}
+          onChange={setSearchQuery}
+          onClose={() => {
+            setShowSearch(false);
+            setSearchQuery("");
+            try {
+              localStorage.setItem("daily.showSearch", "false");
+            } catch {}
+          }}
+          lang={lang}
+          resultsCount={searchQuery.trim() ? filteredTasks.length : undefined}
+        />
+      )}
+
+      {/* Category / Group Filter Pills */}
+      <CategoryFilter
+        activeCategory={selectedCategory}
+        tasks={db.tasks}
+        lang={lang}
+        onSelectCategory={setSelectedCategory}
+      />
+
+      {/* Pinned Focus Notes */}
       <Notes
         notes={db.notes.filter((n) => !n.deletedAt)}
         lang={lang}
@@ -488,7 +684,9 @@ export function App() {
       <main className="flex-1 space-y-6">
         {activeTasksCount > 0 && (
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-medium text-zinc-400">{t.openTasksCount(openCount)}</span>
+            <span className="text-xs font-medium text-zinc-400">
+              {searchQuery.trim() ? t.searchResultsCount(openCount) : t.openTasksCount(openCount)}
+            </span>
             <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 text-xs shadow-xs">
               {sortOptions.map((opt) => {
                 const active = sortBy === opt.id;
@@ -514,6 +712,7 @@ export function App() {
           </div>
         )}
 
+        {/* Priority Groups */}
         {groups.mode === "priority" && (
           <>
             <Group
@@ -522,7 +721,10 @@ export function App() {
               tasks={groups.highPriority}
               alert
               lang={lang}
+              existingTags={allTags}
               onSnooze={snooze}
+              onSelectTag={setSelectedCategory}
+              updateTask={updateTask}
               {...{ toggle, remove, rename }}
             />
             <Group
@@ -530,12 +732,16 @@ export function App() {
               icon={<CheckSquare className="size-4 text-zinc-400" />}
               tasks={groups.regularTasks}
               lang={lang}
+              existingTags={allTags}
               onSnooze={snooze}
+              onSelectTag={setSelectedCategory}
+              updateTask={updateTask}
               {...{ toggle, remove, rename }}
             />
           </>
         )}
 
+        {/* Due Date Groups */}
         {groups.mode === "due" && (
           <>
             <Group
@@ -544,7 +750,10 @@ export function App() {
               tasks={groups.overdue}
               alert
               lang={lang}
+              existingTags={allTags}
               onSnooze={snooze}
+              onSelectTag={setSelectedCategory}
+              updateTask={updateTask}
               {...{ toggle, remove, rename }}
             />
             <Group
@@ -552,7 +761,10 @@ export function App() {
               icon={<Calendar className="size-4 text-emerald-400" />}
               tasks={groups.upcoming}
               lang={lang}
+              existingTags={allTags}
               onSnooze={snooze}
+              onSelectTag={setSelectedCategory}
+              updateTask={updateTask}
               {...{ toggle, remove, rename }}
             />
             <Group
@@ -560,30 +772,58 @@ export function App() {
               icon={<Clock className="size-4 text-zinc-400" />}
               tasks={groups.noDue}
               lang={lang}
+              existingTags={allTags}
               onSnooze={snooze}
+              onSelectTag={setSelectedCategory}
+              updateTask={updateTask}
               {...{ toggle, remove, rename }}
             />
           </>
         )}
 
+        {/* Created Date Groups */}
         {groups.mode === "created" && (
           <Group
             title={t.groupCreated}
             icon={<Sparkles className="size-4 text-sky-400" />}
             tasks={groups.createdTasks}
             lang={lang}
+            existingTags={allTags}
             onSnooze={snooze}
+            onSelectTag={setSelectedCategory}
+            updateTask={updateTask}
             {...{ toggle, remove, rename }}
           />
         )}
 
+        {/* Completed Group */}
         <Group
           title={t.groupDone}
           icon={<CheckCircle2 className="size-4 text-emerald-400" />}
           tasks={groups.done}
           lang={lang}
+          existingTags={allTags}
+          onSelectTag={setSelectedCategory}
+          updateTask={updateTask}
           {...{ toggle, remove, rename }}
         />
+
+        {/* Empty States */}
+        {activeTasksCount > 0 && filteredTasks.length === 0 && (
+          <div className="pt-10 text-center space-y-2">
+            <SearchX className="size-8 text-zinc-600 mx-auto" />
+            <p className="text-sm font-medium text-zinc-400">{t.searchNoResults}</p>
+            {selectedCategory && (
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(null)}
+                className="text-xs text-amber-400 underline cursor-pointer"
+              >
+                نمایش همه دسته‌بندی‌ها
+              </button>
+            )}
+          </div>
+        )}
 
         {activeTasksCount === 0 && (
           <p className="pt-10 text-center text-sm text-zinc-500">{t.emptyTasksMsg}</p>
@@ -591,7 +831,7 @@ export function App() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
+        <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-2.5 text-sm font-medium text-zinc-100 shadow-2xl backdrop-blur-md">
           <span>{toast.text}</span>
           {toast.undo && (
             <button
@@ -610,6 +850,17 @@ export function App() {
 
       {/* In-app native auto updater dialog */}
       <UpdateDialog lang={lang} />
+
+      {/* Fullscreen Alarm Ringing Modal with Continuous Loop & Snooze */}
+      <AlarmModal
+        tasks={ringingTasks}
+        lang={lang}
+        soundEnabled={db.settings.sound}
+        soundTheme={db.settings.alarmTheme || "marimba"}
+        onDismiss={dismissAlarm}
+        onDone={(id) => toggle(id)}
+        onSnooze={snooze}
+      />
     </div>
   );
 }
@@ -620,20 +871,26 @@ function Group({
   tasks,
   alert,
   lang,
+  existingTags,
   toggle,
   remove,
   rename,
+  updateTask,
   onSnooze,
+  onSelectTag,
 }: {
   title: string;
   icon?: React.ReactNode;
   tasks: Task[];
   alert?: boolean;
   lang: Language;
+  existingTags?: string[];
   toggle: (id: string, event?: React.MouseEvent) => void;
   remove: (id: string) => void;
   rename: (id: string, title: string, description?: string | null) => void;
+  updateTask?: (id: string, updates: Partial<Omit<Task, "id" | "createdAt">>) => void;
   onSnooze?: (id: string, preset: SnoozePreset) => void;
+  onSelectTag?: (tag: string) => void;
 }) {
   if (tasks.length === 0) return null;
   return (
@@ -663,10 +920,13 @@ function Group({
             key={t.id}
             task={t}
             lang={lang}
+            existingTags={existingTags}
             onToggle={toggle}
             onDelete={remove}
             onRename={rename}
+            onUpdate={updateTask}
             onSnooze={onSnooze}
+            onSelectTag={onSelectTag}
           />
         ))}
       </div>

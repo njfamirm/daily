@@ -87,15 +87,11 @@ export function normalizeDB(raw: unknown): DB {
       checkIntervalSec: Math.min(3600, Math.max(5, Math.round(interval))),
       leadMinutes: Math.min(1440, Math.max(0, Math.round(lead))),
       theme: s.theme === "light" ? "light" : s.theme === "auto" ? "auto" : "dark",
-      primaryColor:
-        s.primaryColor === "emerald" ||
-        s.primaryColor === "violet" ||
-        s.primaryColor === "blue" ||
-        s.primaryColor === "rose" ||
-        s.primaryColor === "orange"
-          ? s.primaryColor
-          : "yellow",
       language: s.language === "en" ? "en" : "fa",
+      alarmTheme:
+        s.alarmTheme === "radar" || s.alarmTheme === "crystal" || s.alarmTheme === "classic"
+          ? s.alarmTheme
+          : "marimba",
     },
     aiMemory: str(d.aiMemory, "").trim(),
     notes: (Array.isArray(d.notes) ? d.notes : [])

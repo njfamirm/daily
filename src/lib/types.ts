@@ -2,7 +2,6 @@ export type Language = "fa" | "en";
 export type Repeat = "none" | "daily" | "weekly" | "monthly";
 export type Priority = "none" | "low" | "medium" | "high";
 export type ThemeMode = "dark" | "light" | "auto";
-export type PrimaryColor = "yellow" | "emerald" | "violet" | "blue" | "rose" | "orange";
 export type SnoozePreset = "15m" | "1h" | "tomorrow" | "weekend";
 
 export interface Task {
@@ -50,10 +49,10 @@ export interface Settings {
   leadMinutes: number;
   /** Dark, light, or auto theme */
   theme: ThemeMode;
-  /** Primary accent color */
-  primaryColor: PrimaryColor;
   /** UI Language */
   language?: Language;
+  /** Chosen alarm sound synthesis theme */
+  alarmTheme?: "marimba" | "radar" | "crystal" | "classic";
 }
 
 export interface DB {
@@ -74,7 +73,6 @@ export const DEFAULT_DB: DB = {
     checkIntervalSec: 15,
     leadMinutes: 0,
     theme: "dark",
-    primaryColor: "yellow",
     language: "fa",
   },
   aiMemory: "",
