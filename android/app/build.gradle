@@ -19,13 +19,19 @@ android {
         }
     }
     signingConfigs {
-        if (keystorePath) {
-            release {
+        release {
+            if (keystorePath) {
                 storeFile file(keystorePath)
                 storeType "PKCS12"
-                storePassword System.getenv("TASKDROP_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("TASKDROP_KEY_ALIAS")
-                keyPassword System.getenv("TASKDROP_KEY_PASSWORD")
+                storePassword System.getenv("TASKDROP_KEYSTORE_PASSWORD") ?: "taskdrop_pass"
+                keyAlias System.getenv("TASKDROP_KEY_ALIAS") ?: "taskdrop"
+                keyPassword System.getenv("TASKDROP_KEY_PASSWORD") ?: "taskdrop_pass"
+            } else if (file('taskdrop-release.p12').exists()) {
+                storeFile file('taskdrop-release.p12')
+                storeType "PKCS12"
+                storePassword "taskdrop_pass"
+                keyAlias "taskdrop"
+                keyPassword "taskdrop_pass"
             }
         }
     }
@@ -33,7 +39,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (keystorePath) {
+            if (keystorePath || file('taskdrop-release.p12').exists()) {
                 signingConfig signingConfigs.release
             }
         }

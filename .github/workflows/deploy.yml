@@ -84,20 +84,16 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          keystore_path="$RUNNER_TEMP/taskdrop-release.p12"
           if [ -n "$KEYSTORE_B64" ]; then
+            keystore_path="$RUNNER_TEMP/taskdrop-release.p12"
             echo "$KEYSTORE_B64" | base64 -d > "$keystore_path"
             echo "keystore_path=$keystore_path" >> "$GITHUB_OUTPUT"
             echo "keystore_pass=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
             echo "key_alias=$KEY_ALIAS" >> "$GITHUB_OUTPUT"
             echo "key_pass=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
           else
-            echo "Generating fallback CI signing keystore..."
-            keytool -genkeypair -v -keystore "$keystore_path" \
-              -storetype PKCS12 -storepass "taskdrop_pass" \
-              -alias "taskdrop" -keypass "taskdrop_pass" \
-              -dname "CN=TaskDrop, OU=App, O=TaskDrop, L=Tehran, S=Tehran, C=IR" \
-              -validity 10000 -keyalg RSA -keysize 2048
+            echo "Using permanent project release signing keystore..."
+            keystore_path="$GITHUB_WORKSPACE/android/app/taskdrop-release.p12"
             echo "keystore_path=$keystore_path" >> "$GITHUB_OUTPUT"
             echo "keystore_pass=taskdrop_pass" >> "$GITHUB_OUTPUT"
             echo "key_alias=taskdrop" >> "$GITHUB_OUTPUT"
