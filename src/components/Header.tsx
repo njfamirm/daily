@@ -1,7 +1,5 @@
-import { DailyDigestModal } from "@/components/DailyDigestModal.tsx";
 import { HelpSheet } from "@/components/HelpSheet.tsx";
 import { SettingsModal } from "@/components/SettingsModal.tsx";
-import { StreakModal } from "@/components/StreakModal.tsx";
 import { SyncModal } from "@/components/SyncModal.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/input.tsx";
@@ -18,8 +16,6 @@ import {
   ClipboardCopy,
   ClipboardPaste,
   Cloud,
-  FileText,
-  Flame,
   HelpCircle,
   MoreVertical,
   Plus,
@@ -62,8 +58,6 @@ export function Header({
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [digestOpen, setDigestOpen] = useState(false);
-  const [streakOpen, setStreakOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
@@ -267,33 +261,7 @@ export function Header({
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute end-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/98 p-1.5 text-xs shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
-                {/* Daily Digest */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setDigestOpen(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
-                >
-                  <FileText className="size-4 text-zinc-400" />
-                  <span className="flex-1 text-start">{t.dailyDigest}</span>
-                </button>
-
-                {/* 7-day Stats & Streak */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setStreakOpen(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Flame className="size-4 text-zinc-400" />
-                  <span className="flex-1 text-start">{t.weeklyStreak}</span>
-                </button>
-
+              <div className="absolute end-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/98 p-1.5 text-xs shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
                 {/* Cloud Sync */}
                 <button
                   type="button"
@@ -372,22 +340,6 @@ export function Header({
         onUpdateMemory={onUpdateMemory}
         onMessage={onMessage}
         onOpenSyncModal={() => setSyncOpen(true)}
-      />
-
-      {/* Other Utility Modals & Sheets */}
-      <DailyDigestModal
-        open={digestOpen}
-        db={db}
-        lang={lang}
-        onClose={() => setDigestOpen(false)}
-        onMessage={onMessage}
-      />
-
-      <StreakModal
-        open={streakOpen}
-        tasks={db.tasks}
-        lang={lang}
-        onClose={() => setStreakOpen(false)}
       />
 
       <SyncModal
