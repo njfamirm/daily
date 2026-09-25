@@ -69,12 +69,12 @@ export function SyncBar({ db, lang = "fa", onReplace, onUpdateMemory, onMessage 
           size="sm"
           onClick={() => setMemoryOpen(true)}
           title={t.aiMemoryTitle}
-          className="gap-1.5 border-violet-800/60 bg-violet-950/30 text-violet-300 hover:bg-violet-900/40 hover:border-violet-600 cursor-pointer"
+          className="gap-1.5 border-zinc-700 bg-zinc-800/80 text-zinc-200 hover:bg-zinc-700 cursor-pointer"
         >
-          <Brain className="size-3.5 text-violet-400" />
+          <Brain className="size-3.5 text-zinc-400" />
           {t.aiMemory}
           {db.aiMemory?.trim() && (
-            <span className="size-1.5 rounded-full bg-violet-400 animate-pulse" />
+            <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
           )}
         </Button>
       </div>
