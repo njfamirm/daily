@@ -3,7 +3,7 @@ import { Input, Textarea } from "@/components/ui/input.tsx";
 import { Kbd } from "@/components/ui/kbd.tsx";
 import { hapticLight, hapticSuccess, hapticWarning } from "@/lib/haptics.ts";
 import { getTranslation } from "@/lib/i18n.ts";
-import { getTagStyle, parseTag } from "@/lib/tags.ts";
+import { parseTag } from "@/lib/tags.ts";
 import type { Language, Priority, Repeat, Task } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import {
@@ -41,30 +41,8 @@ interface Props {
   onClose: () => void;
 }
 
-const DEFAULT_TAGS_FA = [
-  "حوزه:نکسیم",
-  "حوزه:شخصی",
-  "حوزه:NGO",
-  "نوع:روتین",
-  "نوع:جلسه",
-  "نوع:پیگیری",
-  "پروژه",
-  "خرید",
-  "مالی",
-  "ایده",
-];
-const DEFAULT_TAGS_EN = [
-  "area:work",
-  "area:personal",
-  "area:ngo",
-  "type:routine",
-  "type:meeting",
-  "type:followup",
-  "project",
-  "shopping",
-  "finance",
-  "idea",
-];
+const DEFAULT_TAGS_FA = ["کار", "شخصی", "پروژه", "خرید", "مالی", "ایده", "جلسه"];
+const DEFAULT_TAGS_EN = ["work", "personal", "project", "shopping", "finance", "idea", "meeting"];
 
 function toLocalDatetimeInput(iso: string | null): string {
   if (!iso) return "";
@@ -420,40 +398,26 @@ export function TaskEditModal({
             {tags.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {tags.map((tag) => {
-                  const style = getTagStyle(tag);
                   const parsed = parseTag(tag);
 
                   return (
                     <span
                       key={tag}
-                      className={cn(
-                        "inline-flex items-center rounded-lg border text-xs font-medium overflow-hidden",
-                        style.bg,
-                        style.text,
-                        style.border,
-                      )}
+                      className="inline-flex items-center gap-1 rounded-md border border-zinc-700/80 bg-zinc-800/90 px-2 py-0.5 text-xs font-medium text-zinc-300"
                     >
+                      <span className="text-zinc-500 text-[10px]">#</span>
                       {parsed.isScoped ? (
-                        <>
-                          <span
-                            className={cn(
-                              "px-1.5 py-0.5 text-[10px] font-mono",
-                              style.keyBg || "bg-black/30",
-                            )}
-                          >
-                            {parsed.key}
-                          </span>
-                          <span className="pe-1 ps-1 py-0.5 font-medium">{parsed.value}</span>
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 ps-2 pe-1 py-0.5">
-                          <span className={cn("size-1.5 rounded-full", style.dot)} />#{tag}
+                        <span>
+                          <span className="text-zinc-500 font-normal">{parsed.key}:</span>
+                          <span className="text-zinc-100 font-semibold">{parsed.value}</span>
                         </span>
+                      ) : (
+                        <span>{tag}</span>
                       )}
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="px-1.5 py-0.5 text-zinc-400 hover:bg-black/20 hover:text-red-400 cursor-pointer"
+                        className="ms-1 text-zinc-500 hover:text-red-400 cursor-pointer"
                       >
                         <X className="size-3" />
                       </button>
@@ -494,24 +458,17 @@ export function TaskEditModal({
             {allTagPool.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 <span className="text-[10px] text-zinc-500 me-1">{t.quickAddTag}</span>
-                {allTagPool.slice(0, 6).map((suggestedTag) => {
-                  const style = getTagStyle(suggestedTag);
-                  return (
-                    <button
-                      key={suggestedTag}
-                      type="button"
-                      onClick={() => handleAddTag(suggestedTag)}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition hover:scale-105 cursor-pointer",
-                        style.bg,
-                        style.text,
-                        style.border,
-                      )}
-                    >
-                      <span>+{suggestedTag}</span>
-                    </button>
-                  );
-                })}
+                {allTagPool.slice(0, 6).map((suggestedTag) => (
+                  <button
+                    key={suggestedTag}
+                    type="button"
+                    onClick={() => handleAddTag(suggestedTag)}
+                    className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/80 px-2 py-0.5 text-[11px] font-medium text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 transition-colors cursor-pointer"
+                  >
+                    <span className="text-zinc-500 text-[10px]">+</span>
+                    <span>{suggestedTag}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>

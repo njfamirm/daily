@@ -16,7 +16,7 @@ export interface ParsedTag {
 }
 
 /**
- * Parses a raw tag into either a scoped facet (e.g. "حوزه:نکسیم" -> key: "حوزه", value: "نکسیم")
+ * Parses a raw tag into either a scoped facet (e.g. "key:value" -> key: "key", value: "value")
  * or a simple standalone tag.
  */
 export function parseTag(tag: string): ParsedTag {
@@ -178,7 +178,6 @@ export interface FacetGroup {
 
 /**
  * Extracts and aggregates all facet keys and values across active tasks.
- * (e.g. Scoped facets like "حوزه: [نکسیم, شخصی, ngo]", "نوع: [روتین, جلسه]", and standalone tags)
  */
 export function extractFacetGroups(tasks: Task[]): FacetGroup[] {
   const facetMap = new Map<

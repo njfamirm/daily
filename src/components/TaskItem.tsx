@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { hapticLight, hapticSelection } from "@/lib/haptics.ts";
 import { getTranslation } from "@/lib/i18n.ts";
 import { formatDue } from "@/lib/parse.ts";
-import { getTagStyle, parseTag, PRIORITY_CONFIG } from "@/lib/tags.ts";
+import { parseTag, PRIORITY_CONFIG } from "@/lib/tags.ts";
 import type { Language, Priority, SnoozePreset, Task } from "@/lib/types.ts";
 import { cn } from "@/lib/utils.ts";
 import { AlertCircle, ArrowDown, Check, Flame, Pencil, Repeat2, Trash2 } from "lucide-react";
@@ -189,7 +189,6 @@ export function TaskItem({
               </span>
             )}
             {task.tags.map((tag) => {
-              const style = getTagStyle(tag);
               const parsed = parseTag(tag);
 
               return (
@@ -200,29 +199,16 @@ export function TaskItem({
                     e.stopPropagation();
                     onSelectTag?.(tag);
                   }}
-                  className={cn(
-                    "inline-flex items-center rounded-lg border text-xs font-medium transition-transform hover:scale-105 active:scale-95 cursor-pointer overflow-hidden",
-                    style.bg,
-                    style.text,
-                    style.border,
-                  )}
+                  className="inline-flex items-center gap-1 rounded-md border border-zinc-800/90 bg-zinc-900/80 px-2 py-0.5 text-[11px] font-medium text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 transition-colors cursor-pointer"
                 >
+                  <span className="text-zinc-500 text-[10px]">#</span>
                   {parsed.isScoped ? (
-                    <>
-                      <span
-                        className={cn(
-                          "px-1.5 py-0.5 text-[10px] font-mono",
-                          style.keyBg || "bg-black/30",
-                        )}
-                      >
-                        {parsed.key}
-                      </span>
-                      <span className="pe-2 ps-1 py-0.5 font-medium">{parsed.value}</span>
-                    </>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5">
-                      <span className={cn("size-1.5 rounded-full", style.dot)} />#{tag}
+                    <span>
+                      <span className="text-zinc-500 font-normal">{parsed.key}:</span>
+                      <span className="text-zinc-300 font-semibold">{parsed.value}</span>
                     </span>
+                  ) : (
+                    <span className="text-zinc-300">{tag}</span>
                   )}
                 </button>
               );

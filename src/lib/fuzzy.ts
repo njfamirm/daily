@@ -140,7 +140,7 @@ export function scoreTask(task: Task, query: string): number {
       const cleanTag = rawTag.replace(/^#/, "");
       let tagScore = fuzzyScore(cleanTag, cleanQuery);
 
-      // If scoped tag (e.g. "حوزه:نکسیم"), also match against value part directly
+      // If scoped tag (e.g. "key:value"), also match against value part directly
       if (cleanTag.includes(":")) {
         const parts = cleanTag.split(":");
         const valScore = fuzzyScore(parts[1], cleanQuery);

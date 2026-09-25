@@ -1,9 +1,6 @@
-import { getTranslation } from "@/lib/i18n.ts";
-import { extractFacetGroups, getTagStyle, parseTag } from "@/lib/tags.ts";
+import { parseTag } from "@/lib/tags.ts";
 import type { Language, Task } from "@/lib/types.ts";
-import { cn } from "@/lib/utils.ts";
-import { Inbox, Layers, Tag } from "lucide-react";
-import { useMemo } from "react";
+import { X } from "lucide-react";
 
 interface Props {
   activeCategory: string | null;
@@ -12,171 +9,53 @@ interface Props {
   onSelectCategory: (category: string | null) => void;
 }
 
-export function CategoryFilter({ activeCategory, tasks, lang = "fa", onSelectCategory }: Props) {
-  const t = getTranslation(lang);
+/**
+ * Minimalist Active Filter Chip Bar.
+ * Stays completely hidden by default to preserve extreme minimalism,
+ * and only appears when a category/tag filter is actively selected by the user.
+ */
+export function CategoryFilter({ activeCategory, lang = "fa", onSelectCategory }: Props) {
+  const isFa = lang === "fa";
 
-  const { openTasks, facetGroups, uncategorizedCount } = useMemo(() => {
-    const open = tasks.filter((task) => !task.done && !task.deletedAt);
-    const groups = extractFacetGroups(tasks);
-    const uncategorized = open.filter((task) => !task.tags || task.tags.length === 0).length;
-
-    return {
-      openTasks: open,
-      facetGroups: groups,
-      uncategorizedCount: uncategorized,
-    };
-  }, [tasks]);
-
-  // Primary Scoped Facet (e.g., "حوزه" / "area")
-  const primaryFacetGroup = useMemo(() => {
-    return (
-      facetGroups.find(
-        (g) => g.isScoped && (g.key.toLowerCase() === "حوزه" || g.key.toLowerCase() === "area"),
-      ) || facetGroups.find((g) => g.isScoped)
-    );
-  }, [facetGroups]);
-
-  // Secondary Facets & Standalone Tags
-  const secondaryFacetGroups = useMemo(() => {
-    return facetGroups.filter((g) => g !== primaryFacetGroup);
-  }, [facetGroups, primaryFacetGroup]);
-
-  if (facetGroups.length === 0 && uncategorizedCount === 0) {
+  if (!activeCategory) {
     return null;
   }
 
+  const parsed = parseTag(activeCategory);
+
   return (
-    <div className="space-y-2 py-1">
-      {/* Primary Scope Switcher (e.g. حوزه: نکسیم | شخصی | NGO) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar scroll-smooth">
-        {/* "All" Category Pill */}
-        <button
-          type="button"
-          onClick={() => onSelectCategory(null)}
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-            activeCategory === null
-              ? "border-amber-500/80 bg-amber-500/20 text-amber-300 shadow-xs"
-              : "border-zinc-800/90 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/60 hover:text-zinc-200",
+    <div className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/50 px-3 py-1.5 text-xs animate-in fade-in slide-in-from-top-1 duration-150">
+      <div className="flex items-center gap-2">
+        <span className="text-zinc-400 text-xs font-medium">
+          {isFa ? "فیلتر فعال:" : "Active Filter:"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+          {parsed.isScoped ? (
+            <span>
+              <span className="opacity-60 font-normal">#{parsed.key}:</span>
+              <span>{parsed.value}</span>
+            </span>
+          ) : (
+            <span>#{activeCategory}</span>
           )}
-        >
-          <Layers className="size-3.5" />
-          <span>{t.categoryAll}</span>
-          <span
-            className={cn(
-              "rounded-md px-1.5 py-0.2 text-[10px] font-mono",
-              activeCategory === null
-                ? "bg-amber-950/80 text-amber-200"
-                : "bg-zinc-800/80 text-zinc-400",
-            )}
-          >
-            {openTasks.length}
-          </span>
-        </button>
-
-        {/* Primary Facet Values (e.g. نکسیم, شخصی, NGO) */}
-        {primaryFacetGroup?.values.map((item) => {
-          const isActive = activeCategory === item.rawTag || activeCategory === item.value;
-          const style = getTagStyle(item.rawTag);
-
-          return (
-            <button
-              key={item.rawTag}
-              type="button"
-              onClick={() => onSelectCategory(isActive ? null : item.rawTag)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-                isActive
-                  ? cn("shadow-xs text-white", style.bg, style.border)
-                  : "border-zinc-800/90 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/60 hover:text-zinc-200",
-              )}
-            >
-              <span className={cn("size-2 rounded-full shrink-0", style.dot)} />
-              <span className="text-[11px] opacity-70 font-normal">{primaryFacetGroup.key}:</span>
-              <span>{item.value}</span>
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.2 text-[10px] font-mono",
-                  isActive ? "bg-black/30 text-zinc-100" : "bg-zinc-800/80 text-zinc-400",
-                )}
-              >
-                {item.openCount}
-              </span>
-            </button>
-          );
-        })}
-
-        {/* Uncategorized Pill */}
-        {uncategorizedCount > 0 && (
           <button
             type="button"
-            onClick={() =>
-              onSelectCategory(activeCategory === "uncategorized" ? null : "uncategorized")
-            }
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
-              activeCategory === "uncategorized"
-                ? "border-zinc-500 bg-zinc-800 text-white shadow-xs"
-                : "border-zinc-800/90 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/60 hover:text-zinc-200",
-            )}
+            onClick={() => onSelectCategory(null)}
+            title={isFa ? "حذف فیلتر" : "Clear filter"}
+            className="rounded p-0.5 text-amber-300/80 hover:bg-amber-500/20 hover:text-amber-100 cursor-pointer"
           >
-            <Inbox className="size-3.5 text-zinc-400" />
-            <span>{t.categoryUncategorized}</span>
-            <span
-              className={cn(
-                "rounded-md px-1.5 py-0.2 text-[10px] font-mono",
-                activeCategory === "uncategorized"
-                  ? "bg-zinc-700 text-zinc-200"
-                  : "bg-zinc-800/80 text-zinc-400",
-              )}
-            >
-              {uncategorizedCount}
-            </span>
+            <X className="size-3" />
           </button>
-        )}
+        </span>
       </div>
 
-      {/* Secondary Facets & Tags Row (e.g. نوع: روتین / جلسه, یا پروژه‌ها) */}
-      {secondaryFacetGroups.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-0.5 pb-0.5 no-scrollbar">
-          {secondaryFacetGroups.map((group) =>
-            group.values.map((item) => {
-              const isActive = activeCategory === item.rawTag || activeCategory === item.value;
-              const style = getTagStyle(item.rawTag);
-              const parsed = parseTag(item.rawTag);
-
-              return (
-                <button
-                  key={item.rawTag}
-                  type="button"
-                  onClick={() => onSelectCategory(isActive ? null : item.rawTag)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-medium transition-all cursor-pointer",
-                    isActive
-                      ? cn("shadow-xs text-white", style.bg, style.border)
-                      : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200",
-                  )}
-                >
-                  {parsed.isScoped ? (
-                    <>
-                      <span className="text-[10px] opacity-60 font-mono">{parsed.key}:</span>
-                      <span>{parsed.value}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Tag className="size-2.5 text-zinc-500" />
-                      <span>#{item.value}</span>
-                    </>
-                  )}
-                  <span className="text-[10px] opacity-60 font-mono ms-0.5">
-                    ({item.openCount})
-                  </span>
-                </button>
-              );
-            }),
-          )}
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => onSelectCategory(null)}
+        className="text-[11px] text-zinc-500 hover:text-zinc-300 underline underline-offset-2 cursor-pointer transition-colors"
+      >
+        {isFa ? "نمایش همه تسک‌ها" : "Show all tasks"}
+      </button>
     </div>
   );
 }
